@@ -1,6 +1,7 @@
 import os
 import pyodbc
 import ast
+import pandas as pd
 
 class AzureLoader:
 
@@ -16,8 +17,35 @@ class AzureLoader:
         if not NEW_CRED:
             self._login()
         
-    def _get_cred(self) -> bool:
+    def insert(self,data, table:str) -> None:
+        #create SQL code
+        question_marks = ("?," * len(data.columns))[:-1]
+        command_str = f"INSERT INTO {table} VALUES ({question_marks})"
 
+        #create instance of cursor
+        cursor = self.cnxn.cursor()
+
+        #execute many to iterate over list of values
+        #https://towardsdatascience.com/how-i-made-inserts-into-sql-server-100x-faster-with-pyodbc-5a0b5afdba5
+        cursor.fast_executemany = True
+        cursor.executemany(command_str, data.values.tolist())
+        cursor.commit()
+        return
+
+    def delete_credential(self, azure_server:str, database = None) -> None:
+        content = self._read_credentials_file()
+        
+        #remove all server credentials
+        if database == None:
+            content.pop(azure_server)
+        #remove only specific database credentials
+        else:
+            content[azure_server].pop(database)
+
+        self._write_credentials_file(content)
+        return
+
+    def _get_cred(self) -> bool:
         #check if file exists and read file
         FILE_EXISTS = os.path.isfile(self.cred_file_name)
         if FILE_EXISTS:
@@ -45,7 +73,7 @@ class AzureLoader:
         #prompt user if wanting to create new credentials
         return self.new_credential(FILE_EXISTS,SERVER_IN_CONTENT)
     
-    def new_credential(self, FILE_EXISTS = False, SERVER_IN_CONTENT = False) -> bool:
+    def _new_credential(self, FILE_EXISTS = False, SERVER_IN_CONTENT = False) -> bool:
         answer = input("Do you wanna save new credentials? (Y/N): ")
         if answer == "Y":
             self._UID = input("Enter email: ")
@@ -66,9 +94,7 @@ class AzureLoader:
             self._login()
 
             #hash and write content to file
-            content = str(content).encode("UTF-8").hex()
-            with open(self.cred_file_name,"w") as f:
-                f.write(content)
+            self._write_credentials_files(content)
         return True
 
     def _login(self) -> None:
@@ -89,4 +115,14 @@ class AzureLoader:
         content = ast.literal_eval(content)
         return content
 
+    def _write_credentials_file(self,content:str) -> None:
+        content = str(content).encode("UTF-8").hex()
+        with open(self.cred_file_name,"w") as f:
+            f.write(content)
 
+
+if __name__ == "__main__":
+    df = pd.DataFrame([[1,1.1],[2,2.2],[3,3.3]],columns = ['ID','val'])
+
+    loader = AzureLoader("formuenord.database.windows.net","formuenordDB")
+    loader.execute(df,"INSERT","testTable")
