@@ -73,7 +73,7 @@ class AzureLoader:
         #prompt user if wanting to create new credentials
         return self.new_credential(FILE_EXISTS,SERVER_IN_CONTENT)
     
-    def _new_credential(self, FILE_EXISTS = False, SERVER_IN_CONTENT = False) -> bool:
+    def new_credential(self, FILE_EXISTS = False, SERVER_IN_CONTENT = False) -> bool:
         answer = input("Do you wanna save new credentials? (Y/N): ")
         if answer == "Y":
             self._UID = input("Enter email: ")
@@ -94,7 +94,7 @@ class AzureLoader:
             self._login()
 
             #hash and write content to file
-            self._write_credentials_files(content)
+            self._write_credentials_file(content)
         return True
 
     def _login(self) -> None:
@@ -125,4 +125,3 @@ if __name__ == "__main__":
     df = pd.DataFrame([[1,1.1],[2,2.2],[3,3.3]],columns = ['ID','val'])
 
     loader = AzureLoader("formuenord.database.windows.net","formuenordDB")
-    loader.execute(df,"INSERT","testTable")
