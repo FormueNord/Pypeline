@@ -5,9 +5,9 @@ import pandas as pd
 
 class AzureLoader:
 
-    def __init__(self, azure_server, database, authentication = "ActiveDirectoryPassword"):
-        self.azure_server = azure_server
-        self.database = database
+    def __init__(self, load_destination, authentication = "ActiveDirectoryPassword"):
+        self.azure_server = load_destination["server"]
+        self.database = load_destination["database"]
         self.authentication = authentication
         self.cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
         

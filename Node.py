@@ -1,8 +1,5 @@
 import os
 import sys
-import importlib
-import time
-
 
 class Node:
     """class to run individual pipelines buy calling them when their triggers returns True"""
@@ -32,8 +29,9 @@ class Node:
         #intialize each pipeline and add to self.pipelines
         self.pipelines = {}
         for module in pipeline_files:
-            exec(f"class_obj = getattr(importlib.import_module('{module}'), '{module}')")
-            exec(f"self.pipelines['{module}'] = class_obj()")
+            exec(f"from {module} import {module}")
+            #exec(f"class_obj = getattr(importlib.import_module('{module}'), '{module}')")
+            exec(f"self.pipelines['{module}'] = {module}")
         return
 
 
