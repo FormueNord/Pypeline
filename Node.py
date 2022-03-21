@@ -13,8 +13,9 @@ class Node:
 
         while RUN_TIME:
             for pipeline in self.pipelines.values():
-                pipeline.run() if pipeline.trigger() else None
-
+                trigger_result = pipeline.trigger()
+                if trigger_result:
+                    pipeline.run(trigger_result)
         return
     
     def _load_pipelines(self,pipelines_folder):
