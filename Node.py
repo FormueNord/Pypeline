@@ -1,5 +1,8 @@
 import os
 import sys
+import datetime
+from ErrorAlerter import ErrorAlerter
+
 
 class Node:
     """
@@ -8,12 +11,14 @@ class Node:
     The Node's monitor_pipelines method can be called to monitor each instance of pipelines trigger and activate its run method if conditions are met. 
 
     Args:
-        pipelines_folder:  absolute path to a folder containing .py files with instances of the Pipeline class
+        pipelines_folder:  Absolute path to a folder containing .py files with instances of the Pipeline class
+        ErrorAlerter:  A class with functionality to send error alerts. Current implementation only supports emails.
     """
 
-    def __init__(self,pipelines_folder):
+    def __init__(self,pipelines_folder,ErrorAlerter = ErrorAlerter):
         self._load_pipelines(pipelines_folder)
-        self.pipelines_folder = pipelines_folder
+        self._create_error_message_tracker()
+        self.ErrorAlerter = ErrorAlerter
 
     def monitor_pipelines(self):
         """
@@ -23,11 +28,12 @@ class Node:
         RUN_TIME = True
 
         while RUN_TIME:
-            for pipeline in self.pipelines.values():
-                destination = pipeline.trigger()
+            for pipeline_name in self.pipelines:
+                destination = self.pipelines[pipeline_name].trigger()
                 if destination:
-                    pipeline.run(destination)
+                    self._pipeline_run_with_alert(pipeline_name,destination)
         return
+
     
     def _load_pipelines(self,pipelines_folder):
         """
@@ -49,6 +55,47 @@ class Node:
             #exec(f"class_obj = getattr(importlib.import_module('{module}'), '{module}')")
             exec(f"self.pipelines['{module}'] = {module}")
         return
+
+    def _pipeline_run_with_alert(self,pipeline_name,destination):
+        """
+        Run the instance of Pipeline with pipeline_name and send error alert to recipients if it fails.
+        To avoid spamming recipients a new error won't be sent after the first for five hours.
+
+        Args:
+            pipeline_name:  str matching a key in the self.pipelines dict
+            destination:  the returned value from the Pipeline instances trigger_func. Exact type depends on the functions applied.
+        """
+        try:
+            self.pipelines[pipeline_name].run(destination)
+        except Exception as error:
+            #if its been more than five hours since the last error was sent
+            if self._error_message_tracker[pipeline_name] + \
+            datetime.timedelta(hours = 5) < \
+            datetime.datetime.now():
+                #send error to people specified in Pipeline instance
+                alerter = self.ErrorAlerter(
+                    receivers = self.pipelines[pipeline_name]._error_notify_mails,
+                    subject = f"Error in Pipeline {pipeline_name}",
+                    warning_text = error
+                )
+                alerter.error_alert()
+                #del instance to ensure that it closes down (maybe uneccessary)
+                del alerter
+                #set new datetime for last error sent
+                self._error_message_tracker[pipeline_name] = datetime.datetime.now()
+                print(f"An error message has been sent regarding error in {pipeline_name}")
+                                
+
+    def _create_error_message_tracker(self):
+        """
+        Create a dict for each loaded instance of Pipeline with datetime(1,1,1).
+        The dict is used to track when the last time an error message was sent to avoid spamming the recipients.
+        """
+        self._error_message_tracker = {}
+        for key in self.pipelines.keys():
+            self._error_message_tracker[key] = datetime.datetime(1,1,1)
+        return
+
 
 
 if __name__ == "__main__":

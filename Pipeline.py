@@ -1,4 +1,5 @@
 from AzureLoader import AzureLoader 
+from ErrorAlerter import ErrorAlerter
 import os
 
 class Pipeline:
@@ -18,13 +19,15 @@ class Pipeline:
 
         load_destination:  Dictionary containing 'server','database' and 'table' keys with values referencing the load destination.
 
+        error_notify_mails:  Str with mails of people who are to be notified if an error occurs in the Pipeline
+
         transformer_func (optional):  Function taking a pandas dataframe or series as arg. Transforms the arg input as specified.
 
         check_func (optional):  Function running any checks defined in the check_func.
 
         run_func (optional):  Function changing the default run workflow.
 
-        loaderObj (optional):  A class used to load the Pipeline's data a specified destination. Default is a class used to load to Azure, but can be changed,
+        LoaderObj (optional):  A class used to load the Pipeline's data a specified destination. Default is a class used to load to Azure, but can be changed,
                                if one wishes to load the AWS or any alternative specification. See code for context.
     
     Returns:
@@ -32,15 +35,16 @@ class Pipeline:
     """
 
 
-    def __init__(self, trigger_func, extractor_func, load_destination: dict, transformer_func = lambda x: x, check_func = lambda: None, 
-        run_func = None, loaderObj = AzureLoader):
+    def __init__(self, trigger_func, extractor_func, load_destination: dict, error_notify_mails: str, transformer_func = lambda x: x, check_func = lambda: None, 
+        run_func = None, LoaderObj = AzureLoader, ErrorAlerter = ErrorAlerter):
         self._trigger_func = trigger_func
         self._extractor_func = extractor_func
         self._load_destination = load_destination
         self._transformer_func = transformer_func
         self._run_func = run_func
-        self._loaderObj = AzureLoader
+        self._LoaderObj = LoaderObj
         self._check_func = check_func
+        self._error_notify_mails = error_notify_mails
 
 
     def trigger(self):
@@ -83,7 +87,7 @@ class Pipeline:
         Loads data to target using the self._loaderObj (default is Azure SQL Database).
         Target Azure server, database and table is specified in the dict _load_destination.
         """
-        cnxion = self._loaderObj(self._load_destination)
+        cnxion = self._LoaderObj(self._load_destination)
         cnxion.insert(self.data,self._load_destination["table"])
         return
 
