@@ -20,6 +20,7 @@ class Node:
         self._create_error_message_tracker()
         self.ErrorAlerter = ErrorAlerter
 
+
     def monitor_pipelines(self):
         """
         Monitors loaded instances of Pipeline calling their trigger method and calls the run method if the trigger's conditions are met.
@@ -56,6 +57,7 @@ class Node:
             exec(f"self.pipelines['{module}'] = {module}")
         return
 
+
     def _pipeline_run_with_alert(self,pipeline_name,destination):
         """
         Run the instance of Pipeline with pipeline_name and send error alert to recipients if it fails.
@@ -84,7 +86,7 @@ class Node:
                 #set new datetime for last error sent
                 self._error_message_tracker[pipeline_name] = datetime.datetime.now()
                 print(f"An error message has been sent regarding error in {pipeline_name}")
-                                
+
 
     def _create_error_message_tracker(self):
         """
