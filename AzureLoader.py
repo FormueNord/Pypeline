@@ -123,5 +123,3 @@ class AzureLoader:
 
 if __name__ == "__main__":
     df = pd.DataFrame([[1,1.1],[2,2.2],[3,3.3]],columns = ['ID','val'])
-
-    loader = AzureLoader("formuenord.database.windows.net","formuenordDB")
