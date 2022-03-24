@@ -32,7 +32,8 @@ class Node:
             for pipeline_name in self.pipelines:
                 destination = self.pipelines[pipeline_name].trigger()
                 if destination:
-                    self._pipeline_run_with_alert(pipeline_name,destination)
+                    successful_run = self._pipeline_run_with_alert(pipeline_name,destination)
+                    self._log_pipeline_run(pipeline_name) if successful_run else None
         return
 
     
@@ -69,6 +70,7 @@ class Node:
         """
         try:
             self.pipelines[pipeline_name].run(destination)
+            return True
         except Exception as error:
             #if its been more than five hours since the last error was sent
             if self._error_message_tracker[pipeline_name] + \
@@ -86,6 +88,7 @@ class Node:
                 #set new datetime for last error sent
                 self._error_message_tracker[pipeline_name] = datetime.datetime.now()
                 print(f"An error message has been sent regarding error in {pipeline_name}")
+            return False
 
 
     def _create_error_message_tracker(self):
@@ -98,6 +101,13 @@ class Node:
             self._error_message_tracker[key] = datetime.datetime(1,1,1)
         return
 
+
+    def _log_pipeline_run(self,pipeline_name):
+        str_to_write = f"{pipeline_name} ran successfully at {datetime.datetime.now()}"
+        with open("Pipeline log.txt","a") as f:
+            f.write(str_to_write + "\n")
+        return
+            
 
 
 if __name__ == "__main__":
