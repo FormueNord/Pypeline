@@ -81,12 +81,3 @@ class ErrorAlerter():
             server.login(self.uid,self.pwd)
             server.sendmail(self.uid,self.receivers,self.message.as_string()) 
         return
-
-if __name__ == "__main__":
-    Alerter = ErrorAlerter(
-        receivers = "ca@formuenord.dk",
-        subject = "Tester bare ErrorAlerter",
-        warning_text = "ikke noget vigtigt"
-    )
-    Alerter.error_alert()
-    print("stop")
