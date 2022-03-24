@@ -5,14 +5,14 @@ import pandas as pd
 
 class AzureLoader:
 
-    def __init__(self, load_destination, authentication = "ActiveDirectoryPassword"):
+    def __init__(self, load_destination, authentication_type = "ActiveDirectoryPassword"):
         self.azure_server = load_destination["server"]
         self.database = load_destination["database"]
-        self.authentication = authentication
-        self.cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
+        self.authentication_type = authentication_type
+        self._cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
         
         #load credentials
-        NEW_CRED = self._get_cred()
+        NEW_CRED = self._get_credentials()
         #use loaded credentials to login and init instance of pyodbc.connect
         if not NEW_CRED:
             self._login()
@@ -45,9 +45,9 @@ class AzureLoader:
         self._write_credentials_file(content)
         return
 
-    def _get_cred(self) -> bool:
+    def _get_credentials(self) -> bool:
         #check if file exists and read file
-        FILE_EXISTS = os.path.isfile(self.cred_file_name)
+        FILE_EXISTS = os.path.isfile(self._cred_file_name)
         if FILE_EXISTS:
             content = self._read_credentials_file()
 
@@ -104,12 +104,12 @@ class AzureLoader:
             ";DATABASE="+self.database+
             ";UID="+self._UID+
             ";PWD="+self._PWD+
-            ";Authentication="+self.authentication
+            ";Authentication="+self.authentication_type
         )
         return
     
     def _read_credentials_file(self) -> dict:
-        with open(self.cred_file_name,"r") as f:
+        with open(self._cred_file_name,"r") as f:
             content = bytes.fromhex(f.read())
         content = content.decode("utf-8")
         content = ast.literal_eval(content)
@@ -117,11 +117,9 @@ class AzureLoader:
 
     def _write_credentials_file(self,content:str) -> None:
         content = str(content).encode("UTF-8").hex()
-        with open(self.cred_file_name,"w") as f:
+        with open(self._cred_file_name,"w") as f:
             f.write(content)
 
 
 if __name__ == "__main__":
     df = pd.DataFrame([[1,1.1],[2,2.2],[3,3.3]],columns = ['ID','val'])
-
-    loader = AzureLoader("formuenord.database.windows.net","formuenordDB")

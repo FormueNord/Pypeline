@@ -10,10 +10,10 @@ class ErrorAlerter():
     cred_file_name = "mail_cred_details.txt"
 
     def __init__(self,receivers: str, subject: str, warning_text: str):
-        self.RECEIVERS = receivers
-        self.WARNING_TEXT = warning_text
+        self.receivers = receivers
+        self.warning_text = warning_text
         self._load_credentials()
-        self.SUBJECT = subject
+        self.subject = subject
 
     def _load_credentials(self):
         #create new file if none is available
@@ -24,7 +24,7 @@ class ErrorAlerter():
             content = f.read()
             content_str = bytes.fromhex(content).decode("UTF-8")
             content_dict = ast.literal_eval(content_str)
-            self.UID, self.PWD = content_dict["UID"], content_dict["PWD"]
+            self.uid, self.pwd = content_dict["uid"], content_dict["pwd"]
         print("read the ErrorAlert's credentials file!")
         return
 
@@ -32,9 +32,9 @@ class ErrorAlerter():
         print("If you wanna create a new file, it has to be a microsoft mail, otherwise code needs changes")
         create_new = input("Do you wanna create a new credentials file? (Y/N):  ")
         if create_new:
-            UID = input("Whats your mail adress?:  ")
-            PWD = input("Whats your password?:   ")
-            creds = {"UID":UID,"PWD":PWD}
+            uid = input("Whats your mail adress?:  ")
+            pwd = input("Whats your password?:   ")
+            creds = {"uid":uid,"pwd":pwd}
 
             with open(self.cred_file_name,"w") as f:
                 f.write(str(creds).encode("UTF-8").hex())
@@ -49,12 +49,12 @@ class ErrorAlerter():
         self._send_email()
 
     def _setup_email(self):
-        self.RECEIVERS = self.RECEIVERS.split(',')
-        message = MIMEText(str(self.WARNING_TEXT))
-        message['Subject'] = self.SUBJECT
-        message['From'] = self.UID
-        message['To'] = self.RECEIVERS[0]
-        message['Cc'] = ';'.join(self.RECEIVERS[1:])
+        self.receivers = self.receivers.split(',')
+        message = MIMEText(str(self.warning_text))
+        message['subject'] = self.subject
+        message['From'] = self.uid
+        message['To'] = self.receivers[0]
+        message['Cc'] = ';'.join(self.receivers[1:])
         self.message = message
         return 
     
@@ -78,8 +78,8 @@ class ErrorAlerter():
         with SMTP('smtp.office365.com',587) as server:
             server.ehlo()
             server.starttls()
-            server.login(self.UID,self.PWD)
-            server.sendmail(self.UID,self.RECEIVERS,self.message.as_string()) 
+            server.login(self.uid,self.pwd)
+            server.sendmail(self.uid,self.receivers,self.message.as_string()) 
         return
 
 if __name__ == "__main__":
