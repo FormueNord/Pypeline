@@ -5,12 +5,13 @@ import pandas as pd
 
 class AzureLoader:
 
+    _cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
+
+
     def __init__(self, load_destination, authentication_type = "ActiveDirectoryPassword"):
-        self.azure_server = load_destination["server"]
-        self.database = load_destination["database"]
+        self.load_destination = load_destination
+        self._assert_load_destination()
         self.authentication_type = authentication_type
-        self._cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
-        
         #load credentials
         NEW_CRED = self._get_credentials()
         #use loaded credentials to login and init instance of pyodbc.connect
@@ -37,28 +38,28 @@ class AzureLoader:
         
         #remove all server credentials
         if database == None:
-            content.pop(azure_server)
+            content.pop(self.load_destination["server"])
         #remove only specific database credentials
         else:
-            content[azure_server].pop(database)
+            content[self.load_destination["server"]].pop(database)
 
         self._write_credentials_file(content)
         return
 
     def _get_credentials(self) -> bool:
         #check if file exists and read file
-        FILE_EXISTS = os.path.isfile(self._cred_file_name)
-        if FILE_EXISTS:
+        file_exists = os.path.isfile(self._cred_file_name)
+        if file_exists:
             content = self._read_credentials_file()
 
             #check if server is contained in file
-            SERVER_IN_CONTENT = self.azure_server in content.keys()
-            if SERVER_IN_CONTENT:
-                content_server = content[self.azure_server]
+            server_in_content = self.load_destination["server"] in content.keys()
+            if server_in_content:
+                content_server = content[self.load_destination["server"]]
 
                 #check if database is within sliced data
-                if self.database in content_server.keys():
-                    content_database = content_server[self.database]
+                if self.load_destination["database"] in content_server.keys():
+                    content_database = content_server[self.load_destination["database"]]
                     self._UID = content_database["UID"]
                     self._PWD = content_database["PWD"]
                     return False
@@ -68,27 +69,27 @@ class AzureLoader:
                 print("Can't find an associated server login")
         else:
             print("Can't find the file containing credentials file")
-            SERVER_IN_CONTENT = False
+            server_in_content = False
 
         #prompt user if wanting to create new credentials
-        return self.new_credential(FILE_EXISTS,SERVER_IN_CONTENT)
+        return self.new_credential(file_exists,server_in_content)
     
-    def new_credential(self, FILE_EXISTS = False, SERVER_IN_CONTENT = False) -> bool:
+    def new_credential(self, file_exists = False, server_in_content = False) -> bool:
         answer = input("Do you wanna save new credentials? (Y/N): ")
         if answer == "Y":
             self._UID = input("Enter email: ")
             self._PWD = input("Enter password: ")
 
             #read credentials file or create empty content dict
-            content = self._read_credentials_file() if FILE_EXISTS else {}
+            content = self._read_credentials_file() if file_exists else {}
 
             #add nested dict to content if server not found
-            if not SERVER_IN_CONTENT:
-                content = content | {self.azure_server:{}}
+            if not server_in_content:
+                content = content | {self.load_destination["server"]:{}}
             
             #add credentials for nested dict in content
             cred_dict = {"UID":self._UID, "PWD": self._PWD}
-            content[self.azure_server][self.database] = cred_dict
+            content[self.load_destination["server"]][self.load_destination["database"]] = cred_dict
 
             #test if new credentials can be used to login
             self._login()
@@ -100,8 +101,8 @@ class AzureLoader:
     def _login(self) -> None:
         self.cnxn = pyodbc.connect(
             "DRIVER={ODBC Driver 17 for SQL Server}"+
-            ";SERVER="+self.azure_server+
-            ";DATABASE="+self.database+
+            ";SERVER="+self.load_destination["server"]+
+            ";DATABASE="+self.load_destination["database"]+
             ";UID="+self._UID+
             ";PWD="+self._PWD+
             ";Authentication="+self.authentication_type
@@ -120,6 +121,13 @@ class AzureLoader:
         with open(self._cred_file_name,"w") as f:
             f.write(content)
 
+    def _assert_load_destination(self):
+        fail_string = "load_destination must be a dict with a 'server','database' and 'table' keys"
+        assert isinstance(self.load_destination,dict), fail_string
+        keys = self.load_destination.keys()
+        assert "server" in keys and "database" in keys and "table" in keys, fail_string
+        return
+        
 
 if __name__ == "__main__":
     df = pd.DataFrame([[1,1.1],[2,2.2],[3,3.3]],columns = ['ID','val'])
