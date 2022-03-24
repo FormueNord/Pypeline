@@ -109,7 +109,9 @@ class Node:
         return
             
 
-
-if __name__ == "__main__":
+def main():
     Node_instance = Node("Pipelines")
     Node_instance.monitor_pipelines()
+
+if __name__ == "__main__":
+    main()
