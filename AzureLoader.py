@@ -2,6 +2,7 @@ import os
 import pyodbc
 import ast
 import pandas as pd
+import numpy as np
 
 class AzureLoader:
 
@@ -18,9 +19,12 @@ class AzureLoader:
         if not NEW_CRED:
             self._login()
         
-    def insert(self,data, table:str) -> None:
+    def insert(self,df,table) -> None:
+        #transform np.nan vals to None
+        df = df.replace([np.nan],[None])
+
         #create SQL code
-        question_marks = ("?," * len(data.columns))[:-1]
+        question_marks = ("?," * len(df.columns))[:-1]
         command_str = f"INSERT INTO {table} VALUES ({question_marks})"
 
         #create instance of cursor
@@ -29,9 +33,10 @@ class AzureLoader:
         #execute many to iterate over list of values
         #https://towardsdatascience.com/how-i-made-inserts-into-sql-server-100x-faster-with-pyodbc-5a0b5afdba5
         cursor.fast_executemany = True
-        cursor.executemany(command_str, data.values.tolist())
+        cursor.executemany(command_str, df.values.tolist())
         cursor.commit()
         return
+
 
     def delete_credential(self, azure_server:str, database = None) -> None:
         content = self._read_credentials_file()
@@ -130,4 +135,19 @@ class AzureLoader:
         
 
 if __name__ == "__main__":
-    df = pd.DataFrame([[1,1.1],[2,2.2],[3,3.3]],columns = ['ID','val'])
+    #used for debugging
+    df = pd.DataFrame([
+        [-1,1.1,"abc","EUR"],
+        [-2,1.12,541,"DKK"],
+        [-3,1.123,"abcdefghi",np.nan],
+        [-4,1.1234,"defghijkl","SEK"],
+        [-5,0,"defghijklm","NOK"]],
+        columns = ['integer_val','decimal_val',"varchar_val","char_val"])
+
+    """ df = df.replace([np.nan],[None])
+    Loader = AzureLoader(load_destination = destination)
+    Loader.insert(df,destination["table"]) """
+
+
+
+    print("stop")
