@@ -4,3 +4,7 @@ Pipelines/test1.py
 Pipelines/test2.py
 Pipelines/test3.py
 test_temp.py
+exposuredata.py
+Pipelines/FS_holdingsdata.py
+Pipelines/MN_holdingdata.py
+Pipelines/staticdata.py
