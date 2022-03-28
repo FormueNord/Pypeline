@@ -32,6 +32,7 @@ class Node:
             for pipeline_name in self.pipelines:
                 destination = self.pipelines[pipeline_name].trigger()
                 if destination:
+                    #self.pipelines[pipeline_name].run(destination)
                     successful_run = self._pipeline_run_with_alert(pipeline_name,destination)
                     self._log_pipeline_run(pipeline_name) if successful_run else None
         return
