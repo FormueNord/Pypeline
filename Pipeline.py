@@ -1,6 +1,7 @@
 from AzureLoader import AzureLoader 
 from ErrorAlerter import ErrorAlerter
 import os
+import shutil
 
 class Pipeline:
     """
@@ -27,6 +28,8 @@ class Pipeline:
 
         run_func (optional):  Function changing the default run workflow.
 
+        cleaning (optional):  Value defining what cleaning up to do
+
         LoaderObj (optional):  A class used to load the Pipeline's data a specified destination. Default is a class used to load to Azure, but can be changed,
                                if one wishes to load the AWS or any alternative specification. See code for context.
     
@@ -36,7 +39,7 @@ class Pipeline:
 
 
     def __init__(self, trigger_func, extractor_func, load_destination: dict, error_notify_mails: str, transformer_func = lambda x: x, check_func = lambda: None, 
-        run_func = None, LoaderObj = AzureLoader, ErrorAlerter = ErrorAlerter):
+        run_func = None, cleaning = "move", LoaderObj = AzureLoader, ErrorAlerter = ErrorAlerter):
         self._trigger_func = trigger_func
         self._extractor_func = extractor_func
         self._load_destination = load_destination
@@ -45,6 +48,7 @@ class Pipeline:
         self._LoaderObj = LoaderObj
         self._check_func = check_func
         self._error_notify_mails = error_notify_mails
+        self.cleaning = cleaning
 
 
     def trigger(self):
@@ -109,14 +113,28 @@ class Pipeline:
             trigger_result:  Reference to target extraction point for data i.e. absolute path, https or other extraction target.
                              Arg depends on the trigger_func and extractor_func used to initialize the instance of Pipeline
         """
-        #delete local file if it exists at the destination
-        for destination in trigger_result:
-            if os.path.exists(destination):
-                os.remove(destination)
-        
+        #do something with the uploaded file
+        for src_path in trigger_result:
+            if os.path.exists(src_path):
+                if self.cleaning == "delete":
+                    os.remove(src_path)
+                if self.cleaning == "move":
+                    self._move_and_mkdir(src_path)
+                else:
+                    raise Exception("defined cleaning variable doesn't match any of the implemented operations")
+
         #delete self.data if it exists
         if "data" in dir(self):
             del self.data
+        return
+
+    
+    def _move_and_mkdir(self,src_path):
+        dst_folder = os.path.join("\\".join(src_path.split("\\")[:-1]),"uploaded")
+        if not os.path.exists(dst_folder):
+            os.mkdir(dst_folder)
+        file_name = src_path.split("\\")[-1]
+        shutil.move(src_path,os.path.join(dst_folder,file_name))
         return
 
 
@@ -138,3 +156,4 @@ class Pipeline:
             self.check()
             self.clean(trigger_result)
         return
+    
