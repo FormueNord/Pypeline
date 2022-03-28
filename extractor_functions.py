@@ -1,5 +1,10 @@
 import pandas as pd
 
+#delete when warning message is fixed in Pandas
+import warnings
+warnings.filterwarnings("ignore", message="The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.")
+
+
 def function_constructor(func):
     """
     Decorator used to construct a function
@@ -35,7 +40,7 @@ def all_files_in_folder_deco(func):
 
 @function_constructor
 @all_files_in_folder_deco
-def csv_extractor_constructor(file_path: str, csv_seperator = ";", csv_encoding = "UTF-8"):
+def csv_extractor_constructor(file_path: str, csv_seperator = ";", csv_encoding = "UTF-8", header = "infer"):
     """
     Constructs a .csv reading function. 
     The constructed function read all files in file_paths (str or lst).
@@ -48,7 +53,7 @@ def csv_extractor_constructor(file_path: str, csv_seperator = ";", csv_encoding 
     Returns:
         Dataframe appended from all files in files_path (str or lst)
     """
-    data = pd.read_csv(file_path,sep = csv_seperator, encoding = csv_encoding)
+    data = pd.read_csv(file_path,sep = csv_seperator, encoding = csv_encoding, header = header)
     return data
 
 
