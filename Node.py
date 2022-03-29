@@ -57,8 +57,23 @@ class Node:
             exec(f"from {module} import {module}")
             #exec(f"class_obj = getattr(importlib.import_module('{module}'), '{module}')")
             exec(f"self.pipelines['{module}'] = {module}")
+        
+        #check if all pipelines have the needed credentials
+        self._credentials_check()
         return
 
+    def _credentials_check(self):
+        
+        print("Checking if the credentials for LoaderObj is stored locally for each Pipeline")
+        for pipeline in self.pipelines.values():
+            print(f"Checking credentials for: {pipeline._load_destination}")            
+            pipeline._LoaderObj(pipeline._load_destination)
+
+        print("Checking if credentials for the ErrorAlerter is stored locally")
+        temp = ErrorAlerter("","","")
+
+        print("All needed credentials are stored locally")
+        return
 
     def _pipeline_run_with_alert(self,pipeline_name,destination):
         """
