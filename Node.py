@@ -65,9 +65,13 @@ class Node:
     def _credentials_check(self):
         
         print("Checking if the credentials for LoaderObj is stored locally for each Pipeline")
+        load_destinations = []
         for pipeline in self.pipelines.values():
-            print(f"Checking credentials for: {pipeline._load_destination}")            
-            pipeline._LoaderObj(pipeline._load_destination)
+            load_destinations.append({k: pipeline._load_destination[k] for k in pipeline._load_destination.keys() - {"table"}})
+        load_destinations = [dict(y) for y in set(tuple(x.items()) for x in load_destinations)]
+        for load_destination in load_destinations:
+            print(f"Checking credentials for: {load_destination}")            
+            pipeline._LoaderObj(load_destination, testing_credentials = True)
 
         print("Checking if credentials for the ErrorAlerter is stored locally")
         temp = ErrorAlerter("","","")

@@ -9,9 +9,10 @@ class AzureLoader:
     _cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
 
 
-    def __init__(self, load_destination, authentication_type = "ActiveDirectoryPassword"):
+    def __init__(self, load_destination, authentication_type = "ActiveDirectoryPassword", testing_credentials = False):
         self.load_destination = load_destination
-        self._assert_load_destination()
+        if not testing_credentials:
+            self._assert_load_destination()
         self.authentication_type = authentication_type
         #load credentials
         NEW_CRED = self._get_credentials()
