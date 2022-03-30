@@ -1,10 +1,5 @@
 import pandas as pd
 
-#delete when warning message is fixed in Pandas
-import warnings
-warnings.filterwarnings("ignore", message="The frame.append method is deprecated and will be removed from pandas in a future version. Use pandas.concat instead.")
-
-
 def function_constructor(func):
     """
     Decorator used to construct a function
@@ -29,7 +24,7 @@ def all_files_in_folder_deco(func):
             if len(file_paths) > 1:
                 data = func_readied(file_paths[0])
                 for file_path in file_paths[1:]:
-                    data = data.append(func_readied(file_path))
+                    data = pd.concat([data,func_readied(file_path)])
                 return data
             else:
                 #transform list to str if list length <= 1
@@ -55,5 +50,11 @@ def csv_extractor_constructor(file_path: str, csv_seperator = ";", csv_encoding 
     """
     data = pd.read_csv(file_path,sep = csv_seperator, encoding = csv_encoding, header = header)
     return data
+
+@function_constructor
+@all_files_in_folder_deco
+def excel_extractor_constructor(file_path: str):
+    return pd.read_excel(file_path)
+
 
 
