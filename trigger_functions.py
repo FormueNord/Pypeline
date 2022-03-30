@@ -49,8 +49,6 @@ class emailFetcher:
     instance of emailFetcher
     """
 
-    file_loaders = {"csv": pd.read_csv, "xlsx":pd.read_excel}
-
     def __init__(self,username:str,password:str,email_folder : str = 'Inbox'):
         self.USERNAME = username
         self.PASSWORD = password
@@ -76,25 +74,24 @@ class emailFetcher:
             A list of Message instances
         """
 
+        #search for mails after prior_date
         prior_date = datetime.now() - timedelta(look_day_back)
         timeObj = prior_date.strftime('%d-%b-%Y')
         timeObjString = f'SINCE "{timeObj}"'
-
         numbers = self._checkForFailure(self.imap.uid('search', None,timeObjString))
 
         #if no mails simply return to avoid unnecessary error notification
         if len(numbers[0]) == 0:
             return
 
+        #get uids and the instances of Message
         uids = numbers[0].decode('utf-8').split()
-        
         messages = self._checkForFailure(self.imap.uid('fetch', ','.join(uids), '(RFC822)'))
 
-
+        #look for any mails matching criterias
         relevant_messages = []
         for idx,(_, message) in enumerate(messages[::2]):
             msg = email.message_from_string(message.decode('utf-8'))
-            
             subject = msg.get('subject')
             subject = self._clean_str_format(subject)
             from_adress = msg.get('from')
@@ -122,6 +119,7 @@ class emailFetcher:
         if len(messages) == 0:
             return
         
+        #get attachments from mails in messages
         file_paths = []
         for message in messages:
             uid = message[1]
