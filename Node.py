@@ -31,10 +31,10 @@ class Node:
 
         while RUN_TIME:
             for pipeline_name, pipeline_instance in self.pipelines.items():
-                destination = self._trigger_with_timer(pipeline_name,pipeline_instance)
+                destination = self._run_with_alert(pipeline_name,lambda: self._trigger_with_timer(pipeline_name,pipeline_instance))
                 if destination:
                     #self.pipelines[pipeline_name].run(destination)
-                    successful_run = self._pipeline_run_with_alert(pipeline_name,destination)
+                    successful_run = self._run_with_alert(pipeline_name,lambda: self.pipeline_instance.run(destination))
                     self._log_pipeline_run(pipeline_name) if successful_run else None
             time.sleep(10)
         return
@@ -70,8 +70,9 @@ class Node:
             last_run = self.tracker.tracking_data[pipeline_name]["last trigger"]
             now = datetime.datetime.now()
             if last_run + pipeline_instance.interval < now:
+                trigger_result = pipeline_instance.trigger()
                 self.tracker.update(pipeline_name,"last trigger",now)
-                return pipeline_instance.trigger()
+                return trigger_result
             else:
                 return
         return pipeline_instance.trigger()
@@ -94,7 +95,7 @@ class Node:
         return
 
 
-    def _pipeline_run_with_alert(self,pipeline_name,destination):
+    def _run_with_alert(self,pipeline_name,func):
         """
         Run the instance of Pipeline with pipeline_name and send error alert to recipients if it fails.
         To avoid spamming recipients a new error won't be sent after the first for five hours.
@@ -104,7 +105,7 @@ class Node:
             destination:  the returned value from the Pipeline instances trigger_func. Exact type depends on the functions applied.
         """
         try:
-            self.pipelines[pipeline_name].run(destination)
+            func()
             return True
         except Exception as error:
             #if its been more than five hours since the last error was sent
