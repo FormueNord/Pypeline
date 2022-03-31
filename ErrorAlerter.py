@@ -1,9 +1,7 @@
 import os
 from email.mime.text import MIMEText
 from smtplib import SMTP
-from base64 import b64decode
 import ast
-import time
 
 class ErrorAlerter():
     
