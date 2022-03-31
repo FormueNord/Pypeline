@@ -2,6 +2,7 @@ from AzureLoader import AzureLoader
 from ErrorAlerter import ErrorAlerter
 import os
 import shutil
+import datetime
 
 class Pipeline:
     """
@@ -28,7 +29,9 @@ class Pipeline:
 
         run_func (optional):  Function changing the default run workflow.
 
-        cleaning (optional):  Value defining what cleaning up to do
+        cleaning (optional):  Value defining what cleaning up to do.
+
+        interval (optional): datetime.timedelta defining in what intervals the trigger should be called.
 
         LoaderObj (optional):  A class used to load the Pipeline's data a specified destination. Default is a class used to load to Azure, but can be changed,
                                if one wishes to load the AWS or any alternative specification. See code for context.
@@ -38,8 +41,8 @@ class Pipeline:
     """
 
 
-    def __init__(self, trigger_func, extractor_func, load_destination: dict, error_notify_mails: str, transformer_func = lambda x: x, check_func = lambda: None, 
-        run_func = None, cleaning = "move", LoaderObj = AzureLoader, ErrorAlerter = ErrorAlerter):
+    def __init__(self, trigger_func, extractor_func, load_destination: dict, error_notify_mails: str, transformer_func = lambda x: x,
+        check_func = lambda: None, run_func = None, cleaning: str = "move", interval: datetime.timedelta = None, LoaderObj = AzureLoader):
         self._trigger_func = trigger_func
         self._extractor_func = extractor_func
         self._load_destination = load_destination
@@ -49,9 +52,10 @@ class Pipeline:
         self._check_func = check_func
         self._error_notify_mails = error_notify_mails
         self.cleaning = cleaning
+        self.interval = interval
 
 
-    def trigger(self):
+    def trigger(self, time_delta : datetime.timedelta = None):
         """
         Runs _trigger_func
 
@@ -156,4 +160,3 @@ class Pipeline:
             self.check()
             self.clean(trigger_result)
         return
-    
