@@ -55,6 +55,3 @@ def csv_extractor_constructor(file_path: str, csv_seperator = ";", csv_encoding 
 @all_files_in_folder_deco
 def excel_extractor_constructor(file_path: str):
     return pd.read_excel(file_path)
-
-
-
