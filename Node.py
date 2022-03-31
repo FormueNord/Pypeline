@@ -1,8 +1,9 @@
 import os
 import sys
 import datetime
+import time
 from ErrorAlerter import ErrorAlerter
-
+from RunTracker import RunTracker
 
 class Node:
     """
@@ -15,9 +16,9 @@ class Node:
         ErrorAlerter:  A class with functionality to send error alerts. Current implementation only supports emails.
     """
 
-    def __init__(self,pipelines_folder,ErrorAlerter = ErrorAlerter):
+    def __init__(self,pipelines_folder,ErrorAlerter = ErrorAlerter, RunTracker = RunTracker):
         self._load_pipelines(pipelines_folder)
-        self._create_error_message_tracker()
+        self.tracker = RunTracker(self.pipelines.keys())
         self.ErrorAlerter = ErrorAlerter
 
 
@@ -29,12 +30,13 @@ class Node:
         RUN_TIME = True
 
         while RUN_TIME:
-            for pipeline_name in self.pipelines:
-                destination = self.pipelines[pipeline_name].trigger()
+            for pipeline_name, pipeline_instance in self.pipelines.items():
+                destination = self._trigger_with_timer(pipeline_name,pipeline_instance)
                 if destination:
                     #self.pipelines[pipeline_name].run(destination)
                     successful_run = self._pipeline_run_with_alert(pipeline_name,destination)
                     self._log_pipeline_run(pipeline_name) if successful_run else None
+            time.sleep(10)
         return
 
     
@@ -55,15 +57,27 @@ class Node:
         self.pipelines = {}
         for module in pipeline_files:
             exec(f"from {module} import {module}")
-            #exec(f"class_obj = getattr(importlib.import_module('{module}'), '{module}')")
             exec(f"self.pipelines['{module}'] = {module}")
         
         #check if all pipelines have the needed credentials
         self._credentials_check()
         return
+    
+
+    def _trigger_with_timer(self,pipeline_name,pipeline_instance):
+        #if pipeline has a defined interval check if the next trigger run is overdue
+        if pipeline_instance.interval:
+            last_run = self.tracker.tracking_data[pipeline_name]["last trigger"]
+            now = datetime.datetime.now()
+            if last_run + pipeline_instance.interval < now:
+                self.tracker.update(pipeline_name,"last trigger",now)
+                return pipeline_instance.trigger()
+            else:
+                return
+        return pipeline_instance.trigger()
+
 
     def _credentials_check(self):
-        
         print("Checking if the credentials for LoaderObj is stored locally for each Pipeline")
         load_destinations = []
         for pipeline in self.pipelines.values():
@@ -76,8 +90,9 @@ class Node:
         print("Checking if credentials for the ErrorAlerter is stored locally")
         temp = ErrorAlerter("","","")
 
-        print("All needed credentials are stored locally")
+        print("Credentials are stored locally")
         return
+
 
     def _pipeline_run_with_alert(self,pipeline_name,destination):
         """
@@ -93,9 +108,9 @@ class Node:
             return True
         except Exception as error:
             #if its been more than five hours since the last error was sent
-            if self._error_message_tracker[pipeline_name] + \
-            datetime.timedelta(hours = 5) < \
-            datetime.datetime.now():
+            now = datetime.datetime.now()
+            if self.tracker.tracking_data[pipeline_name]["last error"] + \
+            datetime.timedelta(hours = 5) < now:
                 #send error to people specified in Pipeline instance
                 alerter = self.ErrorAlerter(
                     receivers = self.pipelines[pipeline_name]._error_notify_mails,
@@ -103,24 +118,13 @@ class Node:
                     warning_text = error
                 )
                 alerter.error_alert()
+                self.tracker.update(pipeline_name,"last error",now)
                 #del instance to ensure that it closes down (maybe uneccessary)
                 del alerter
                 #set new datetime for last error sent
-                self._error_message_tracker[pipeline_name] = datetime.datetime.now()
                 print(f"An error message has been sent regarding error in {pipeline_name}")
             return False
-
-
-    def _create_error_message_tracker(self):
-        """
-        Create a dict for each loaded instance of Pipeline with datetime(1,1,1).
-        The dict is used to track when the last time an error message was sent to avoid spamming the recipients.
-        """
-        self._error_message_tracker = {}
-        for key in self.pipelines.keys():
-            self._error_message_tracker[key] = datetime.datetime(1,1,1)
-        return
-
+        
 
     def _log_pipeline_run(self,pipeline_name):
         str_to_write = f"{pipeline_name} ran successfully at {datetime.datetime.now()}"
