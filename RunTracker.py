@@ -4,7 +4,7 @@ import pickle
 
 class RunTracker:
 
-    _tracking_file_path = os.path.join(os.path.dirname(__file__),"Pipelines tracking data.pickle")
+    _tracking_file_path = os.path.join(os.path.dirname(__file__),"Tracking data.pickle")
 
     _template_subdict = {
         "last trigger": datetime.datetime(1,1,1),
