@@ -18,7 +18,7 @@ class Node:
 
     def __init__(self,pipelines_folder,ErrorAlerter = ErrorAlerter, RunTracker = RunTracker):
         self._load_pipelines(pipelines_folder)
-        self.tracker = RunTracker(self.pipelines.keys())
+        self.tracker = RunTracker({key:pipeline.timer for key, pipeline in zip(self.pipelines.keys(),self.pipelines.values())})
         self.ErrorAlerter = ErrorAlerter
 
 
@@ -31,10 +31,11 @@ class Node:
 
         while RUN_TIME:
             for pipeline_name, pipeline_instance in self.pipelines.items():
+                #destination = self._trigger_with_timer(pipeline_name,pipeline_instance)
                 destination = self._run_with_alert(pipeline_name,lambda: self._trigger_with_timer(pipeline_name,pipeline_instance))
                 if destination:
-                    #self.pipelines[pipeline_name].run(destination)
-                    successful_run = self._run_with_alert(pipeline_name,lambda: self.pipeline_instance.run(destination))
+                    #successful_run = self.pipelines[pipeline_name].run(destination)
+                    successful_run = self._run_with_alert(pipeline_name,lambda: pipeline_instance.run(destination))
                     self._log_pipeline_run(pipeline_name) if successful_run else None
             time.sleep(10)
         return
@@ -66,12 +67,12 @@ class Node:
 
     def _trigger_with_timer(self,pipeline_name,pipeline_instance):
         #if pipeline has a defined interval check if the next trigger run is overdue
-        if pipeline_instance.interval:
+        if pipeline_instance.timer:
             last_run = self.tracker.tracking_data[pipeline_name]["last trigger"]
             now = datetime.datetime.now()
-            if last_run + pipeline_instance.interval < now:
+            if last_run + pipeline_instance.timer["interval"] < now:
                 trigger_result = pipeline_instance.trigger()
-                self.tracker.update(pipeline_name,"last trigger",now)
+                self.tracker.update(pipeline_name,"last trigger")
                 return trigger_result
             else:
                 return
@@ -105,8 +106,7 @@ class Node:
             destination:  the returned value from the Pipeline instances trigger_func. Exact type depends on the functions applied.
         """
         try:
-            func()
-            return True
+            return func()
         except Exception as error:
             #if its been more than five hours since the last error was sent
             now = datetime.datetime.now()
@@ -119,7 +119,7 @@ class Node:
                     warning_text = error
                 )
                 alerter.error_alert()
-                self.tracker.update(pipeline_name,"last error",now)
+                self.tracker.update(pipeline_name,"last error")
                 #del instance to ensure that it closes down (maybe uneccessary)
                 del alerter
                 #set new datetime for last error sent

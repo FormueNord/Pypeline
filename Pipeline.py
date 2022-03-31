@@ -42,7 +42,7 @@ class Pipeline:
 
 
     def __init__(self, trigger_func, extractor_func, load_destination: dict, error_notify_mails: str, transformer_func = lambda x: x,
-        check_func = lambda: None, run_func = None, cleaning: str = "move", interval: datetime.timedelta = None, LoaderObj = AzureLoader):
+        check_func = lambda: None, run_func = None, cleaning: str = "move", timer: dict = None, LoaderObj = AzureLoader):
         self._trigger_func = trigger_func
         self._extractor_func = extractor_func
         self._load_destination = load_destination
@@ -52,7 +52,7 @@ class Pipeline:
         self._check_func = check_func
         self._error_notify_mails = error_notify_mails
         self.cleaning = cleaning
-        self.interval = interval
+        self.timer = timer
 
 
     def trigger(self, time_delta : datetime.timedelta = None):
@@ -118,14 +118,15 @@ class Pipeline:
                              Arg depends on the trigger_func and extractor_func used to initialize the instance of Pipeline
         """
         #do something with the uploaded file
-        for src_path in trigger_result:
-            if os.path.exists(src_path):
-                if self.cleaning == "delete":
-                    os.remove(src_path)
-                if self.cleaning == "move":
-                    self._move_and_mkdir(src_path)
-                else:
-                    raise Exception("defined cleaning variable doesn't match any of the implemented operations")
+        if isinstance(trigger_result,str): 
+            for src_path in trigger_result:
+                if os.path.exists(src_path):
+                    if self.cleaning == "delete":
+                        os.remove(src_path)
+                    if self.cleaning == "move":
+                        self._move_and_mkdir(src_path)
+                    else:
+                        raise Exception("defined cleaning variable doesn't match any of the implemented operations")
 
         #delete self.data if it exists
         if "data" in dir(self):
@@ -159,4 +160,4 @@ class Pipeline:
             self.load()
             self.check()
             self.clean(trigger_result)
-        return
+        return True
