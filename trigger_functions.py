@@ -1,12 +1,8 @@
 import os
 import imaplib
 import email
-from base64 import b64decode
 import os.path    
 from datetime import timedelta, datetime
-import pandas as pd
-
-
 
 def function_constructor(func):
     """
@@ -134,11 +130,9 @@ class emailFetcher:
 
                     #https://stackoverflow.com/questions/3527933/move-an-email-in-gmail-with-python-and-imaplib
                     #copy mail to the email_folder_path
-                    result = self.imap.uid("COPY", uid, email_folder_path)
-                    #if mail was copied delete the old mail
-                    if result[0] == "OK":
-                        mov, data = self.imap.uid('STORE', uid , '+FLAGS', '(\Deleted)')
-                        self.imap.expunge() 
+                    self._checkForFailure(self.imap.uid("COPY", uid, email_folder_path))
+                    self._checkForFailure(self.imap.uid('STORE', uid , '+FLAGS', '(\Deleted)'))
+                    self.imap.expunge() 
         return file_paths
 
     def search_and_get_attachments(self, expected_from_adress: str, expected_subject: str, folder_path: str, email_folder_path: str):
@@ -157,3 +151,4 @@ class emailFetcher:
 
     def _clean_str_format(self,string:str):
         return string.replace('\r','').replace('\n','')
+
