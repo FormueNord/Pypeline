@@ -118,7 +118,7 @@ class Pipeline:
                              Arg depends on the trigger_func and extractor_func used to initialize the instance of Pipeline
         """
         #do something with the uploaded file
-        if isinstance(trigger_result,str): 
+        if not isinstance(trigger_result,bool): 
             for src_path in trigger_result:
                 if os.path.exists(src_path):
                     if self.cleaning == "delete":
