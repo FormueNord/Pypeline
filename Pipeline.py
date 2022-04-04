@@ -96,7 +96,7 @@ class Pipeline:
         Target Azure server, database and table is specified in the dict _load_destination.
         """
         cnxion = self._LoaderObj(self._load_destination)
-        cnxion.insert(self.data,self._load_destination["table"])
+        cnxion.insert(self.data)
         return
 
 
@@ -157,7 +157,7 @@ class Pipeline:
         else:
             self.extract(trigger_result)
             #if no new data break workflow and don't log
-            if self.data == None:
+            if self.data is None:
                 return False
             self.transform()
             self.load()
