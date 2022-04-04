@@ -106,6 +106,7 @@ class Node:
         try:
             return func()
         except Exception as error:
+            print(error)
             #if its been more than five hours since the last error was sent
             now = datetime.datetime.now()
             if self.tracker.tracking_data[pipeline_name]["last error"] + \
