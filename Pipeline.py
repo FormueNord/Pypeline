@@ -118,7 +118,7 @@ class Pipeline:
                              Arg depends on the trigger_func and extractor_func used to initialize the instance of Pipeline
         """
         #do something with the uploaded file
-        if not isinstance(trigger_result,bool): 
+        if isinstance(trigger_result,list): 
             for src_path in trigger_result:
                 if os.path.exists(src_path):
                     if self.cleaning == "delete":
@@ -156,6 +156,9 @@ class Pipeline:
             self._run_func(trigger_result)
         else:
             self.extract(trigger_result)
+            #if no new data break workflow and don't log
+            if self.data == None:
+                return False
             self.transform()
             self.load()
             self.check()
