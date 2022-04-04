@@ -8,7 +8,7 @@ def function_constructor(func):
         return lambda file_paths: func(file_paths, **kwargs)
     return wrapper
 
-def all_files_in_folder_deco(func):
+def apply_each_ele_in_list(func):
     """
     Decorator to repeat func for all files in folder
 
@@ -34,7 +34,7 @@ def all_files_in_folder_deco(func):
     return wrapper
 
 @function_constructor
-@all_files_in_folder_deco
+@apply_each_ele_in_list
 def csv_extractor_constructor(file_path: str, csv_seperator = ";", csv_encoding = "UTF-8", header = "infer"):
     """
     Constructs a .csv reading function. 
@@ -52,6 +52,6 @@ def csv_extractor_constructor(file_path: str, csv_seperator = ";", csv_encoding 
     return data
 
 @function_constructor
-@all_files_in_folder_deco
+@apply_each_ele_in_list
 def excel_extractor_constructor(file_path: str):
     return pd.read_excel(file_path)
