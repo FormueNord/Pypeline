@@ -20,11 +20,12 @@ class AzureLoader:
         if not NEW_CRED:
             self._login()
         
-    def insert(self,df,table) -> None:
+    def insert(self,df) -> None:
         #transform np.nan vals to None
         df = df.replace([np.nan],[None])
 
         #create SQL code
+        table = self.load_destination["table"]
         question_marks = ("?," * len(df.columns))[:-1]
         command_str = f"INSERT INTO {table} VALUES ({question_marks})"
 
@@ -136,17 +137,15 @@ class AzureLoader:
         
 
 if __name__ == "__main__":
+    from datetime import datetime
+    now = datetime.now()
     #used for debugging
     df = pd.DataFrame([
-        [-1,1.1,"abc","EUR"],
-        [-2,1.12,541,"DKK"],
-        [-3,1.123,"abcdefghi",np.nan],
-        [-4,1.1234,"defghijkl","SEK"],
-        [-5,0,"defghijklm","NOK"]],
-        columns = ['integer_val','decimal_val',"varchar_val","char_val"])
-
-    """ df = df.replace([np.nan],[None])
-    Loader = AzureLoader(load_destination = destination)
+        [-1,1.1,1.2,now],
+        [-2,1.12,1.13,now]],
+        columns = ["ID","val1","val2","date"])
+    df = df.replace([np.nan],[None])
+    """ Loader = AzureLoader(load_destination = destination)
     Loader.insert(df,destination["table"]) """
 
 
