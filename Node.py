@@ -68,11 +68,9 @@ class Node:
     def _trigger_with_timer(self,pipeline_name,pipeline_instance):
         #if pipeline has a defined interval check if the next trigger run is overdue
         if pipeline_instance.timer:
-            last_run = self.tracker.tracking_data[pipeline_name]["last trigger"]
-            now = datetime.datetime.now()
-            if last_run + pipeline_instance.timer["interval"] < now:
+            if self.tracker.tracking_data[pipeline_name]["schedule"] < datetime.datetime.now():
                 trigger_result = pipeline_instance.trigger()
-                self.tracker.update(pipeline_name,"last trigger")
+                self.tracker.update_scheduler(pipeline_name)
                 return trigger_result
             else:
                 return
