@@ -77,8 +77,12 @@ class emailFetcher:
         numbers = self._checkForFailure(self.imap.uid('search', None,timeObjString))
 
         #if no mails simply return to avoid unnecessary error notification
-        if len(numbers[0]) == 0:
-            return
+        #temporary check to see whether this part of the code is responsible for an annoying error
+        try:
+            if len(numbers[0]) == 0:
+                return
+        except Exception:
+            raise "Fejl i den første len i emailFetcher"
 
         #get uids and the instances of Message
         uids = numbers[0].decode('utf-8').split()
@@ -112,8 +116,12 @@ class emailFetcher:
             Name of the local file name if any files are saved from email attachments.
         """
 
-        if len(messages) == 0:
-            return
+        #temporary check to see whether this part of the code is responsible for an annoying error
+        try:
+            if len(messages) == 0:
+                return
+        except Exception:
+            raise "Fejl i den anden len i emailFetcher"
         
         #get attachments from mails in messages
         file_paths = []
