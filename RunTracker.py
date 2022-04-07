@@ -62,20 +62,14 @@ class RunTracker:
 
     
     def update(self,pipeline_name: str, field: str):
-        if field == "last trigger" and self.tracking_data[pipeline_name]["schedule"]:
-            data = self.tracking_data[pipeline_name]
-            time_passed = datetime.datetime.now() - data["last trigger"]
-            floored_time = time_passed // data["interval"] * data["interval"] + data["last trigger"]
-            self.tracking_data[pipeline_name]["last trigger"] = floored_time
-        else:
-            self.tracking_data[pipeline_name][field] = datetime.datetime.now()
+        self.tracking_data[pipeline_name][field] = datetime.datetime.now()
         self.write_to_pickle()
 
     def update_scheduler(self,pipeline_name: str):
         data = self.tracking_data[pipeline_name]
         now = datetime.datetime.now()
-        time_passed = now - data["last trigger"]
-        next_workflow = time_passed // data["interval"] * data["interval"] + data["last trigger"]
+        time_passed = now - data["schedule"]
+        next_workflow = (time_passed // data["interval"] + 1) * data["interval"] + data["schedule"]
         self.tracking_data[pipeline_name]["last trigger"] = now
         self.tracking_data[pipeline_name]["schedule"] = next_workflow
         self.write_to_pickle()
