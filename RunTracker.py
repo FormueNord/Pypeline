@@ -73,6 +73,7 @@ class RunTracker:
         self.tracking_data[pipeline_name]["last trigger"] = now
         self.tracking_data[pipeline_name]["schedule"] = next_workflow
         self.write_to_pickle()
+        return
     
     def write_to_pickle(self):
         with open(self._tracking_file_path,"wb") as f:
