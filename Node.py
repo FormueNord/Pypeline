@@ -66,9 +66,8 @@ class Node:
             for pipeline_name, pipeline_instance in self.pipelines.items():
                 trigger_result = self.trigger(pipeline_name, pipeline_instance)
                 if trigger_result:
-                    print(pipeline_name, " was triggered and now I'm gonna run it")
                     self.run(trigger_result, pipeline_name, pipeline_instance)
-            time.sleep(10)
+            time.sleep(20)
 
 
     @_alert_decor
@@ -76,11 +75,8 @@ class Node:
         #if pipeline has a defined interval check if the next trigger run is overdue
         if pipeline_instance.timer:
             if self.tracker.tracking_data[pipeline_name]["schedule"] <= datetime.datetime.now():
-                print("I'm triggering: ", pipeline_name)
                 trigger_result = pipeline_instance.trigger()
-                print(pipeline_name, "was triggerede and gave the result", trigger_result)
                 self.tracker.update_scheduler(pipeline_name)
-                print("I updated the scheduler for ", pipeline_name)
                 return trigger_result
             else:
                 return
