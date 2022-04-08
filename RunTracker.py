@@ -10,7 +10,7 @@ class RunTracker:
         "last trigger": datetime.datetime(1,1,1),
         "last error": datetime.datetime(1,1,1),
         "interval": None,
-        "schedule": None,
+        "schedule": datetime.datetime(2000,1,1),
     }
 
     def __init__(self,pipeline_data):
@@ -38,14 +38,14 @@ class RunTracker:
         for pipeline_name in pipeline_data:
             #If pipeline not in first level of dict add it using template
             if pipeline_name not in keys:
-                new_pipeline = {pipeline_name: self._template_subdict}
+                new_pipeline = {pipeline_name: self._template_subdict.copy()}
                 self.tracking_data |= new_pipeline
                 #No reason to check subkeys if its a new added pipeline
                 continue
             #Check if all subkeys are available for loaded pipelines
             for subkey in subkeys:
                 if subkey not in self.tracking_data[pipeline_name].keys():
-                    self.tracking_data[pipeline_name][subkey] = self._template_subdict[subkey]
+                    self.tracking_data[pipeline_name][subkey] = self._template_subdict[subkey].copy()
         
 
         for key,val in pipeline_data.items():
