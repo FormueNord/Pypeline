@@ -3,6 +3,7 @@ import sys
 import datetime
 from ErrorAlerter import ErrorAlerter
 from RunTracker import RunTracker
+import time
 
 
 def _alert_decor(method):
@@ -68,7 +69,7 @@ class Node:
                 if trigger_result:
                     #successful_run = self.pipelines[pipeline_name].run(destination)
                     self.run(trigger_result, pipeline_name, pipeline_instance)
-            #time.sleep(20)
+            time.sleep(20)
 
 
     @_alert_decor
