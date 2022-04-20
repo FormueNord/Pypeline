@@ -22,8 +22,7 @@ def _alert_decor(method):
             print(error)
             #if its been more than five hours since the last error was sent
             now = datetime.datetime.now()
-            if self.tracker.tracking_data[pipeline_name]["last error"] + \
-            datetime.timedelta(hours = 5) < now:
+            if self.tracker.tracking_data[pipeline_name]["last error"] + datetime.timedelta(hours = 5) < now:
                 #send error to people specified in Pipeline instance
                 alerter = self.ErrorAlerter(
                     receivers = self.pipelines[pipeline_name]._error_notify_mails,
@@ -66,7 +65,7 @@ class Node:
             for pipeline_name, pipeline_instance in self.pipelines.items():
                 trigger_result = self.trigger(pipeline_name, pipeline_instance)
                 if trigger_result:
-                    self.run(trigger_result, pipeline_name, pipeline_instance)
+                    self.run(pipeline_name, trigger_result, pipeline_instance)
             time.sleep(20)
 
 
@@ -84,7 +83,7 @@ class Node:
     
 
     @_alert_decor
-    def run(self,trigger_result,pipeline_name, pipeline_instance):
+    def run(self,pipeline_name, trigger_result, pipeline_instance):
         result = pipeline_instance.run(trigger_result)
         if result:
             str_to_write = f"{pipeline_name} ran successfully at {datetime.datetime.now()}"

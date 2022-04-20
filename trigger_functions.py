@@ -78,11 +78,9 @@ class emailFetcher:
 
         #if no mails simply return to avoid unnecessary error notification
         #temporary check to see whether this part of the code is responsible for an annoying error
-        try:
-            if len(numbers[0]) == 0:
-                return
-        except Exception:
-            raise "Fejl i den første len i emailFetcher"
+
+        if len(numbers[0]) == 0:
+            return
 
         #get uids and the instances of Message
         uids = numbers[0].decode('utf-8').split()
@@ -148,6 +146,8 @@ class emailFetcher:
         Runs search_for_email and get_attachments
         """
         lst_msg_uid = self.search_for_emails(expected_from_adress, expected_subject)
+        if not lst_msg_uid:
+            return
         abs_file_paths = self.get_attachments(lst_msg_uid, folder_path, email_folder_path)
         return abs_file_paths
 
