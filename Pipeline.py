@@ -25,8 +25,6 @@ class Pipeline:
 
         transformer_func (optional):  Function taking a pandas dataframe or series as arg. Transforms the arg input as specified.
 
-        check_func (optional):  Function running any checks defined in the check_func.
-
         run_func (optional):  Function changing the default run workflow.
 
         cleaning (optional):  Value defining what cleaning up to do.
@@ -98,15 +96,6 @@ class Pipeline:
         cnxion = self._LoaderObj(self._load_destination)
         cnxion.insert(self.data)
         return
-
-
-    def check(self):
-        """
-        Run function to check the data uploaded from the Pipeline.
-        If not _check_func is supplied when initializing the Pipeline instance the check simply passes.
-        """
-        self._check_func()
-        return
     
 
     def clean(self, trigger_result):
@@ -117,7 +106,9 @@ class Pipeline:
             trigger_result:  Reference to target extraction point for data i.e. absolute path, https or other extraction target.
                              Arg depends on the trigger_func and extractor_func used to initialize the instance of Pipeline
         """
-        #do something with the uploaded file
+        #only do move or delete operations for str or list types, since this should be a file path
+        if isinstance(trigger_result,str):
+            trigger_result = list(trigger_result)
         if isinstance(trigger_result,list): 
             for src_path in trigger_result:
                 if os.path.exists(src_path):
@@ -161,6 +152,5 @@ class Pipeline:
                 return False
             self.transform()
             self.load()
-            self.check()
             self.clean(trigger_result)
         return True
