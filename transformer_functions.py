@@ -12,6 +12,56 @@ def function_constructor(func):
 def strings_to_dates(df,datetime_transformer = lambda x: datetime.datetime.strptime(x,"%d/%m/%Y").date()):
     for column in df.columns:
         if "date" in column.lower():
-            df[column] = df[column].apply(datetime_transformer)
+            if not all(("datetime" in str(type(value)) for value in df[column])):
+                df[column] = df[column].apply(datetime_transformer)
     return df
+
+def collateral_column_date_iterator(df, column_name, row_string):
+    df.insert(0,column_name, None)
+    date_value = None
+    for i,string in enumerate(df.iloc[:,1]):
+        df.iloc[i,0] = date_value
+        if row_string in str(string):
+            date_value = datetime.datetime.strptime(string[-8:],"%Y%m%d").date()
+        if i == 6:
+            df.iloc[i,0] = column_name
+    return df
+
+def collateral_transformer():
+    def wrapper(df):
+        df = collateral_column_date_iterator(df, "File_Date_ID", "Collateral Positions")
+        df = df.iloc[6:]
+        headers = df.iloc[0].str.translate(str.maketrans(" /","__"))
+        headers = headers.str.replace("(","", regex = True)
+        headers = headers.str.replace(")","", regex = True)
+        headers = headers.str.replace("%","percent")
+        df.columns = headers
+        df = df.iloc[1:,:22]
+        df = df[~df["State"].isna()]
+        df = df[["Collateral Positions" not in str(string) for string in df["State"]]]
+        df = df[df["State"] != "State"]
+        df = strings_to_dates(df)
+        df.insert(1,"Upload_Date",datetime.datetime.now().date())
+        return df
+    return wrapper
+
+def exposure_transformer():
+    def wrapper(df):
+        df = collateral_column_date_iterator(df, "File_Date_ID", "Exposure Statement")
+        df = df[6:]
+        headers = df.iloc[0].str.translate(str.maketrans(" /","__"))
+        headers = headers.str.replace("(","", regex = True)
+        headers = headers.str.replace(")","", regex = True)
+        headers = headers.str.replace("%","percent")
+        df.columns = headers
+        df = df.iloc[1:]
+        df.rename({"Exposure_Date":"Exposure_Date_ID"}, inplace = True, axis = 1)
+        df = df[~df["Trade_Ref"].isna()]
+        df = df[["Exposure Statement" not in str(string) for string in df["Trade_Ref"]]]
+        df = df[["Trade Ref" not in str(string) for string in df["Trade_Ref"]]]
+        df = strings_to_dates(df)
+        df.insert(1,"Upload_Date",datetime.datetime.now().date())
+        return df
+    return wrapper
+
             

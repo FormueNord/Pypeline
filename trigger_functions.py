@@ -1,8 +1,9 @@
 import os
 import imaplib
-import email
 import os.path    
+import email
 from datetime import timedelta, datetime
+import msal
 
 def function_constructor(func):
     """
@@ -50,13 +51,59 @@ class emailFetcher:
         self.PASSWORD = password
 
         self.imap =  imaplib.IMAP4_SSL('outlook.office365.com')
-        self._checkForFailure(self.imap.login(self.USERNAME,self.PASSWORD))
+        config = {"authority": "https://login.microsoftonline.com/4b2541b6-173d-4cfb-956e-bc1b3d46a48e",
+            "scope" : ["https://outlook.office.com/IMAP.AccessAsUser.All"],
+            "secret": "UqK8Q~ezRxPZHZG96Wh.pBZXKDrMHUFAfSsRLaNZ",
+            "client_id":"86503419-481a-4d07-ba16-bcfad020b753",
+            "endpoint": "https://outlook.office.com/IMAP.AccessAsUser.All"}
+
+        app = msal.ConfidentialClientApplication(
+        config["client_id"], authority=config["authority"],
+        client_credential=config["secret"],
+        )
+
+        app = msal.PublicClientApplication(config["client_id"], authority=config["authority"])
+        flow = app.initiate_device_flow(scopes=config["scope"])
+        result = app.acquire_token_by_device_flow(flow)["access_token"]
+        access_string = self.generate_oauth2_string("ca@formuenord.dk", result, False)
+        self._checkForFailure(self.imap.authenticate('XOAUTH2', lambda x: access_string))
         self._checkForFailure(self.imap.select(email_folder))
 
     def __exit___(self):
         #close connection to email when script ends
         self.imap.close()
+
+    def generate_oauth2_string(self, username, access_token, as_base64=False):
+        import base64
+        auth_string = 'user=%s\1auth=Bearer %s\1\1' % (username, access_token)
+        auth_string = auth_string.encode("utf-8")
+        if as_base64:
+            auth_string = base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')
+        return auth_string
     
+    def create_new_oauth_flow(self):
+        config = {"authority": "https://login.microsoftonline.com/4b2541b6-173d-4cfb-956e-bc1b3d46a48e",
+            "scope" : ["https://outlook.office.com/IMAP.AccessAsUser.All"],
+            "secret": "UqK8Q~ezRxPZHZG96Wh.pBZXKDrMHUFAfSsRLaNZ",
+            "client_id":"86503419-481a-4d07-ba16-bcfad020b753",
+            "endpoint": "https://outlook.office.com/IMAP.AccessAsUser.All"}
+
+
+        # Create a preferably long-lived app instance which maintains a token cache.
+        app = msal.ConfidentialClientApplication(
+            config["client_id"], authority=config["authority"],
+            client_credential=config["secret"],
+            )
+
+        app = msal.PublicClientApplication(config["client_id"], authority=config["authority"])
+        flow = app.initiate_device_flow(scopes=config["scope"])
+        print(flow)
+        return flow, app
+    
+    def create_new_oauth_token(self,flow,app):
+        result = app.acquire_token_by_device_flow(flow)
+        return result
+
     def search_for_emails(self,expected_from_adress: str, expected_subject: str, look_day_back: int = 1) -> email.message.Message:
         """
         Searches for mails with the specified from adress and subject line.
