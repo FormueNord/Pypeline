@@ -139,7 +139,7 @@ class Mailbox:
         uids = self._checkForFailure(self.imap.uid("search",None,*args))
         uids = uids[0].decode("utf-8").split()
 
-        if len(uids[0]) == 0:
+        if len(uids) == 0:
             print("No emails found matching time criteria")
             return []
 
