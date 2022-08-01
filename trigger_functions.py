@@ -4,6 +4,7 @@ import os.path
 import email
 from datetime import timedelta, datetime
 import msal
+import Othenticator
 
 def function_constructor(func):
     """
@@ -32,9 +33,68 @@ def folder_monitor_constructor(folder_path, in_name_criteria = None):
         return trigger_files
     return [os.path.join(folder_path,file) for file in files_in_folder]
 
-class emailFetcher:
+
+class Mail:
+
+    files_in_dir_path = []
+    dir_path = ""
+
+    def __init__(self, uid: bytes,response: bytes):
+        self.uid = uid
+        self.message = self._construct_Message_obj(response)
+    
+    @staticmethod
+    def _construct_Message_obj(response):
+        return email.message_from_string(response[0][1].decode("utf-8"))
+    
+    def get_subject(self) -> str:
+        subject = self.message.get("subject")
+        return self._clean_str_format(subject)
+
+    def get_from_adress(self) -> str:
+        from_adress = self.message.get("from")
+        return from_adress[from_adress.find('<') + 1:].replace('>','')
+
+    def get_attachments(self,folder_path) -> str:
+        file_paths = []
+        
+        self._file_names_in_directory(folder_path)
+        for part in self.message.walk():
+            if part.get_content_maintype() != 'multipart' and part.get('Content-Disposition') is not None:
+                file_data = part.get_payload(decode = True)
+                file_name = self._clean_str_format(part.get_filename())
+                file_name = self._file_name_versioning(file_name)
+                file_path = os.path.join(folder_path,file_name)
+                with open(file_path,'wb') as f:
+                    f.write(file_data)
+                file_paths.append(file_path)
+                self.files_in_dir_path.append(file_name)
+        return file_paths
+
+    def _file_names_in_directory(self,local_path):
+        if self.dir_path == local_path:
+            return self.files_in_dir_path
+        elif self.dir_path == "":
+            self.dir_path = local_path
+        self.files_in_dir_path = os.listdir(local_path)
+    
+    def _file_name_versioning(self,file_name):
+        version = 1
+        original_file_name = file_name
+        while file_name in self.files_in_dir_path:
+            file_name_components = original_file_name.split(".")
+            file_name = file_name_components[0] + "_" + str(version) + "." + file_name_components[1]
+            version += 1
+        return file_name
+
+    @staticmethod
+    def _clean_str_format(string:str):
+        return string.replace('\r','').replace('\n','')
+
+
+class Mailbox:
     """
-    Creates instance of emailFetcher which logs onto the relevant office365 email.
+    Creates instance of Mailbox which logs onto the relevant office365 email.
 
     Args:
     username:str = email username
@@ -43,160 +103,87 @@ class emailFetcher:
     
 
     Returns:
-    instance of emailFetcher
+    instance of Mailbox
     """
+    loaded_mails = []
 
-    def __init__(self,username:str,password:str,email_folder : str = 'Inbox'):
-        self.USERNAME = username
-        self.PASSWORD = password
+    def __init__(self,email: str, config: dict, IMAP_host: str = "outlook.office365.com"):
+        self.imap =  imaplib.IMAP4_SSL(IMAP_host)
+        self._IMAP_authenticate(email, config)
+        self.imap.select("inbox")
 
-        self.imap =  imaplib.IMAP4_SSL('outlook.office365.com')
-        config = {"authority": "https://login.microsoftonline.com/4b2541b6-173d-4cfb-956e-bc1b3d46a48e",
-            "scope" : ["https://outlook.office.com/IMAP.AccessAsUser.All"],
-            "secret": "UqK8Q~ezRxPZHZG96Wh.pBZXKDrMHUFAfSsRLaNZ",
-            "client_id":"86503419-481a-4d07-ba16-bcfad020b753",
-            "endpoint": "https://outlook.office.com/IMAP.AccessAsUser.All"}
-
-        app = msal.ConfidentialClientApplication(
-        config["client_id"], authority=config["authority"],
-        client_credential=config["secret"],
-        )
-
-        app = msal.PublicClientApplication(config["client_id"], authority=config["authority"])
-        flow = app.initiate_device_flow(scopes=config["scope"])
-        result = app.acquire_token_by_device_flow(flow)["access_token"]
-        access_string = self.generate_oauth2_string("ca@formuenord.dk", result, False)
-        self._checkForFailure(self.imap.authenticate('XOAUTH2', lambda x: access_string))
-        self._checkForFailure(self.imap.select(email_folder))
+    def _IMAP_authenticate(self, email, config):
+        try:
+            othenticator = Othenticator.Othenticator(config)
+            othenticator.imap_authentication(username = email, imap_instance = self.imap)
+        except: 
+            raise Exception(f"Othenticator failed to authenticate email {email}")
 
     def __exit___(self):
         #close connection to email when script ends
         self.imap.close()
-
-    def generate_oauth2_string(self, username, access_token, as_base64=False):
-        import base64
-        auth_string = 'user=%s\1auth=Bearer %s\1\1' % (username, access_token)
-        auth_string = auth_string.encode("utf-8")
-        if as_base64:
-            auth_string = base64.b64encode(auth_string.encode('utf-8')).decode('utf-8')
-        return auth_string
     
-    def create_new_oauth_flow(self):
-        config = {"authority": "https://login.microsoftonline.com/4b2541b6-173d-4cfb-956e-bc1b3d46a48e",
-            "scope" : ["https://outlook.office.com/IMAP.AccessAsUser.All"],
-            "secret": "UqK8Q~ezRxPZHZG96Wh.pBZXKDrMHUFAfSsRLaNZ",
-            "client_id":"86503419-481a-4d07-ba16-bcfad020b753",
-            "endpoint": "https://outlook.office.com/IMAP.AccessAsUser.All"}
+    def _format_search_criterias(self, *args) -> tuple:
+        args = list(args)
+        for i,arg in enumerate(args):
+            # all the inputs for search method needs to be strings
+            if isinstance(arg, datetime):
+                arg = arg.strftime("%d-%b-%Y")
+            # search strings needs to be surrounded by apostrophes
+            if i % 2 == 1:
+                args[i] = '"' + arg + '"'
+        return tuple(args)
 
+    def search_emails(self, *args, subject_exact_match = False) -> tuple:
+        args = self._format_search_criterias(*args)
+        uids = self._checkForFailure(self.imap.uid("search",None,*args))
+        uids = uids[0].decode("utf-8").split()
 
-        # Create a preferably long-lived app instance which maintains a token cache.
-        app = msal.ConfidentialClientApplication(
-            config["client_id"], authority=config["authority"],
-            client_credential=config["secret"],
-            )
+        if len(uids[0]) == 0:
+            print("No emails found matching time criteria")
+            return []
 
-        app = msal.PublicClientApplication(config["client_id"], authority=config["authority"])
-        flow = app.initiate_device_flow(scopes=config["scope"])
-        print(flow)
-        return flow, app
-    
-    def create_new_oauth_token(self,flow,app):
-        result = app.acquire_token_by_device_flow(flow)
-        return result
+        imap_response = self._fetch_mails(uids)
+        mails = self._construct_Mails(imap_response,uids)
+        if subject_exact_match:
+            if not "SUBJECT" in args:
+                raise Exception ("To do exact subject matching SUBJECT must be one of the search criterias")
+            expected_subject = args[args.index("SUBJECT") + 1]
+            self.loaded_mails = self._subject_exact_match(mails, expected_subject)
+        return mails
 
-    def search_for_emails(self,expected_from_adress: str, expected_subject: str, look_day_back: int = 1) -> email.message.Message:
-        """
-        Searches for mails with the specified from adress and subject line.
-
-        Args:
-            expected_from_adress:str = the from adress for which the email is expected.
-            expected_subject:str = part of the subject line for the email which is searched for.
-            look_day_back:int = the amount of days back the scripts looks to search for the email.
-
-        Returns:
-            A list of Message instances
-        """
-
-        #search for mails after prior_date
-        prior_date = datetime.now() - timedelta(look_day_back)
-        timeObj = prior_date.strftime('%d-%b-%Y')
-        timeObjString = f'SINCE "{timeObj}"'
-        numbers = self._checkForFailure(self.imap.uid('search', None,timeObjString))
-
-        #if no mails simply return to avoid unnecessary error notification
-        #temporary check to see whether this part of the code is responsible for an annoying error
-
-        if len(numbers[0]) == 0:
-            return
-
-        #get uids and the instances of Message
-        uids = numbers[0].decode('utf-8').split()
-        messages = self._checkForFailure(self.imap.uid('fetch', ','.join(uids), '(RFC822)'))
-
-        #look for any mails matching criterias
-        relevant_messages = []
-        for idx,(_, message) in enumerate(messages[::2]):
-            msg = email.message_from_string(message.decode('utf-8'))
-            subject = msg.get('subject')
-            subject = self._clean_str_format(subject)
-            from_adress = msg.get('from')
-            from_adress = from_adress[from_adress.find('<') + 1:].replace('>','')
-
-            if expected_subject in subject and expected_from_adress in from_adress:
-                relevant_messages.append([msg,uids[idx]])
-            
-        return relevant_messages 
-    
-    def get_attachments(self,messages:list[email.message.Message], folder_path: str, email_folder_path: str) -> list[str]:
-        """
-        Downloads and saves attachments from emails and moves the email to the specified email_folder_path. 
-        Takes the result of search_for_email as arg.
-
-        Args:
-            messages: list[email.message.message,uid] = list of instances of Message. Is the output of search_for_email
-            folder_path: str = an absolute path to the folder which the attachments are saved to
-            email_folder_path: str = a path to the email folder in which emails are placed after their attachments are downloaded
-
-        Returns:
-            Name of the local file name if any files are saved from email attachments.
-        """
-
-        #temporary check to see whether this part of the code is responsible for an annoying error
-        try:
-            if len(messages) == 0:
-                return
-        except Exception:
-            raise "Fejl i den anden len i emailFetcher"
-        
-        #get attachments from mails in messages
+    def get_attachments(self,file_path):
         file_paths = []
-        for message in messages:
-            uid = message[1]
-            for part in message[0].walk():
-                if part.get_content_maintype() != 'multipart' and part.get('Content-Disposition') is not None:
-                    file_data = part.get_payload(decode = True)
-                    file_name = self._clean_str_format(part.get_filename())
-                    file_path = os.path.join(folder_path,file_name)
-                    with open(file_path,'wb') as f:
-                        f.write(file_data)
-                    file_paths.append(file_path)
+        try:
+            for mail in self.loaded_mails:
+                temp_file_paths = mail.get_attachments(file_path)
+                file_paths.append(temp_file_paths)
+            return file_paths
+        except:
+            raise Exception("Failed to fetch attachments from loaded messages")
+    
+    def move_messages(self, email_folder_path):
+        for mail in self.loaded_mails:
+            self._checkForFailure(self.imap.uid("COPY", mail.uid, email_folder_path))
+            self._checkForFailure(self.imap.uid("STORE", mail.uid, "+FLAGS", "(\Deleted)"))
+            self.imap.expunge()
 
-                    #https://stackoverflow.com/questions/3527933/move-an-email-in-gmail-with-python-and-imaplib
-                    #copy mail to the email_folder_path
-                    self._checkForFailure(self.imap.uid("COPY", uid, email_folder_path))
-                    self._checkForFailure(self.imap.uid('STORE', uid , '+FLAGS', '(\Deleted)'))
-                    self.imap.expunge() 
-        return file_paths
+    def _construct_Mails(self, response:list[tuple,bytes],uids:list[bytes]) -> list[Mail]:
+        mails = []
+        for i in range(len(uids)):
+            mails.append(Mail(uid = uids[i], response = response[i*2 : (i+1)*2]))
+        return mails
 
-    def search_and_get_attachments(self, expected_from_adress: str, expected_subject: str, folder_path: str, email_folder_path: str):
-        """
-        Runs search_for_email and get_attachments
-        """
-        lst_msg_uid = self.search_for_emails(expected_from_adress, expected_subject)
-        if not lst_msg_uid:
-            return
-        abs_file_paths = self.get_attachments(lst_msg_uid, folder_path, email_folder_path)
-        return abs_file_paths
+    def _subject_exact_match(self,mails: list[Mail],expected_subject):
+        relevant_messages = []
+        for mail in mails:
+            if expected_subject == '"' + mail.get_subject() + '"':
+                relevant_messages.append(mail)
+        return relevant_messages
+
+    def _fetch_mails(self,uids):
+        messages = self._checkForFailure(self.imap.uid('fetch', ','.join(uids), '(RFC822)'))
+        return messages
 
     def _checkForFailure(self,returned):
         result, other = returned
@@ -204,6 +191,5 @@ class emailFetcher:
             raise Exception('IMAP failed')
         return other
 
-    def _clean_str_format(self,string:str):
-        return string.replace('\r','').replace('\n','')
+
 
