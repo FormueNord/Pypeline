@@ -66,8 +66,7 @@ class Node:
                 trigger_result = self.trigger(pipeline_name, pipeline_instance)
                 if trigger_result:
                     self.run(pipeline_name, trigger_result, pipeline_instance)
-            time.sleep(20)
-
+            time.sleep(60)
 
     @_alert_decor
     def trigger(self, pipeline_name, pipeline_instance):
