@@ -150,7 +150,9 @@ class Mailbox:
                 raise Exception ("To do exact subject matching SUBJECT must be one of the search criterias")
             expected_subject = args[args.index("SUBJECT") + 1]
             self.loaded_mails = self._subject_exact_match(mails, expected_subject)
-        return mails
+        else:
+            self.loaded_mails = mails
+        return self.loaded_mails
 
     def get_attachments(self,file_path):
         file_paths = []
