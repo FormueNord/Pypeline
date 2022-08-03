@@ -158,8 +158,7 @@ class Mailbox:
         file_paths = []
         try:
             for mail in self.loaded_mails:
-                temp_file_paths = mail.get_attachments(file_path)
-                file_paths.append(temp_file_paths)
+                file_paths += mail.get_attachments(file_path)
             return file_paths
         except:
             raise Exception("Failed to fetch attachments from loaded messages")
