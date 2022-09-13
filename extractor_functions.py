@@ -53,5 +53,10 @@ def csv_extractor_constructor(file_path: str, csv_seperator = ";", csv_encoding 
 
 @function_constructor
 @apply_each_ele_in_list
+def excel_extractor_constructor_no_header(file_path: str):
+    return pd.read_excel(file_path, header = None)
+
+@function_constructor
+@apply_each_ele_in_list
 def excel_extractor_constructor(file_path: str):
     return pd.read_excel(file_path)

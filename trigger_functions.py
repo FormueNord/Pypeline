@@ -3,7 +3,6 @@ import imaplib
 import os.path    
 import email
 from datetime import timedelta, datetime
-import msal
 import Othenticator
 
 def function_constructor(func):
