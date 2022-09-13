@@ -26,15 +26,14 @@ class AzureLoader:
 
         #create SQL code
         table = self.load_destination["table"]
+        col_names = ",".join(df.columns)
         question_marks = ("?," * len(df.columns))[:-1]
-        command_str = f"INSERT INTO {table} VALUES ({question_marks})"
+        command_str = f"INSERT INTO {table} ({col_names}) VALUES ({question_marks})"
 
         #create instance of cursor
         cursor = self.cnxn.cursor()
 
         #execute many to iterate over list of values
-        #https://towardsdatascience.com/how-i-made-inserts-into-sql-server-100x-faster-with-pyodbc-5a0b5afdba5
-        cursor.fast_executemany = True
         cursor.executemany(command_str, df.values.tolist())
         cursor.commit()
         return
