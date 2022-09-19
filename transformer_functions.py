@@ -22,7 +22,7 @@ def collateral_column_date_iterator(df, column_name, row_string):
     for i,string in enumerate(df.iloc[:,1]):
         df.iloc[i,0] = date_value
         if row_string in str(string):
-            date_value = datetime.datetime.strptime(string[-15:][:8],"%Y%m%d").date()
+            date_value = datetime.datetime.strptime(string[-10:],"%d-%m-%Y").date()
         if df.iloc[i,1] == "State":
             df.iloc[i,0] = column_name
     return df
@@ -30,13 +30,16 @@ def collateral_column_date_iterator(df, column_name, row_string):
 def collateral_transformer():
     def wrapper(df):
         df = collateral_column_date_iterator(df, "File_Date_ID", "Collateral Positions")
-        df = df.iloc[2:]
+        df = df.iloc[3:]
         headers = df.iloc[0].str.translate(str.maketrans(" /","__"))
         headers = headers.str.replace("(","", regex = True)
         headers = headers.str.replace(")","", regex = True)
         headers = headers.str.replace("%","percent")
         headers = headers.str.replace("-","_")
+        headers = headers[headers != ""]
         df.columns = headers
+        df = df.loc[:,[isinstance(col,str) for col in df.columns]]
+
         df = df.iloc[1:,:21]
         df = df[~df["State"].isna()]
         df = df[["Collateral Positions" not in str(string) for string in df["State"]]]
