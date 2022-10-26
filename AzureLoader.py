@@ -3,6 +3,7 @@ import pyodbc
 import ast
 import pandas as pd
 import numpy as np
+import regex as re
 
 class AzureLoader:
 
@@ -38,6 +39,38 @@ class AzureLoader:
         cursor.commit()
         return
 
+    def get_all(self) -> pd.DataFrame:
+        """
+        Get all data for all columns in table
+        """
+        sql_string = f"SELECT * FROM {self.load_destination['table']}"
+        return self.get_execute(sql_string)
+
+    def get(self, columns: list[str], filter_string: str = "") -> pd.DataFrame:
+        """
+        Get data for specified columns.
+        OPTIONAL: specify filter string in SQL format
+        """
+        select_string = "SELECT " + ",".join(columns)
+        if filter_string != "":
+            filter_string = "WHERE " + filter_string
+
+        sql_string = f"{select_string} FROM {self.load_destination['table']} {filter_string}"
+
+        return self.get_execute(sql_string)
+    
+    def get_execute(self,sql_string: str) -> pd.DataFrame:
+        """
+        Execute sql_string and return pandas dataframe.
+        Replaces the word after FROM with the table specificed in load_destination.
+        """
+        #replace table name to limit instances access to other tables
+        sql_string = self._replace_FROM_destination(sql_string)
+        cursor = self.cnxn.cursor()
+        result = cursor.execute(sql_string)
+        cols = [col[0] for col in result.description]
+        data = result.fetchall()
+        return pd.DataFrame.from_records(data, columns = cols)
 
     def delete_credential(self, azure_server:str, database = None) -> None:
         content = self._read_credentials_file()
@@ -55,64 +88,70 @@ class AzureLoader:
     def _get_credentials(self) -> bool:
         #check if file exists and read file
         file_exists = os.path.isfile(self._cred_file_name)
-        if file_exists:
-            content = self._read_credentials_file()
-
-            #check if server is contained in file
-            server_in_content = self.load_destination["server"] in content.keys()
-            if server_in_content:
-                content_server = content[self.load_destination["server"]]
-
-                #check if database is within sliced data
-                if self.load_destination["database"] in content_server.keys():
-                    content_database = content_server[self.load_destination["database"]]
-                    self._UID = content_database["UID"]
-                    self._PWD = content_database["PWD"]
-                    return False
-                else:
-                    print("Can't find the database login at server level")
-            else:
-                print("Can't find an associated server login")
-        else:
+        if not file_exists:
             print("Can't find the file containing credentials file")
             server_in_content = False
-
-        #prompt user if wanting to create new credentials
-        return self.new_credential(file_exists,server_in_content)
+            return self.new_credential(file_exists,server_in_content)
+        
+        content = self._read_credentials_file()
+        #check if server is contained in file
+        server_in_content = self.load_destination["server"] in content.keys()
+        if not server_in_content:
+            print("Can't find an associated server login")
+            return self.new_credential(file_exists,server_in_content)
+        
+        content_server = content[self.load_destination["server"]]
+        #check if database is within sliced data
+        if not self.load_destination["database"] in content_server.keys():
+            print("Can't find the database login at server level")
+            return self.new_credential(file_exists,server_in_content)
+        content_database = content_server[self.load_destination["database"]]
+        self._UID = content_database["UID"]
+        self._PWD = content_database["PWD"]
+        return False
     
     def new_credential(self, file_exists = False, server_in_content = False) -> bool:
         answer = input("Do you wanna save new credentials? (Y/N): ")
-        if answer == "Y":
-            self._UID = input("Enter email: ")
-            self._PWD = input("Enter password: ")
+        if answer == "N":
+            return False
+        self._UID = input("Enter email: ")
+        self._PWD = input("Enter password: ")
 
-            #read credentials file or create empty content dict
-            content = self._read_credentials_file() if file_exists else {}
+        #read credentials file or create empty content dict
+        content = self._read_credentials_file() if file_exists else {}
 
-            #add nested dict to content if server not found
-            if not server_in_content:
-                content = content | {self.load_destination["server"]:{}}
-            
-            #add credentials for nested dict in content
-            cred_dict = {"UID":self._UID, "PWD": self._PWD}
-            content[self.load_destination["server"]][self.load_destination["database"]] = cred_dict
+        #add nested dict to content if server not found
+        if not server_in_content:
+            content = content | {self.load_destination["server"]:{}}
+        
+        #add credentials for nested dict in content
+        cred_dict = {"UID":self._UID, "PWD": self._PWD}
+        content[self.load_destination["server"]][self.load_destination["database"]] = cred_dict
 
-            #test if new credentials can be used to login
-            self._login()
+        #test if new credentials can be used to login
+        self._login()
 
-            #hash and write content to file
-            self._write_credentials_file(content)
+        #hash and write content to file
+        self._write_credentials_file(content)
         return True
 
     def _login(self) -> None:
-        self.cnxn = pyodbc.connect(
-            "DRIVER={ODBC Driver 17 for SQL Server}"+
-            ";SERVER="+self.load_destination["server"]+
-            ";DATABASE="+self.load_destination["database"]+
-            ";UID="+self._UID+
-            ";PWD="+self._PWD+
-            ";Authentication="+self.authentication_type
-        )
+        try:
+            self.cnxn = pyodbc.connect(
+                "DRIVER={ODBC Driver 17 for SQL Server}"+
+                ";SERVER="+self.load_destination["server"]+
+                ";DATABASE="+self.load_destination["database"]+
+                ";UID="+self._UID+
+                ";PWD="+self._PWD+
+                ";Authentication="+self.authentication_type
+            )
+        except(pyodbc.Error) as e:
+            
+            print("""
+        If this fails and requires MFA set the parameter 'authentication_type' to 'ActiveDirectoryInteractive'. 
+        This will allow for MFA auth""")
+
+            raise e
         return
     
     def _read_credentials_file(self) -> dict:
@@ -133,6 +172,10 @@ class AzureLoader:
         keys = self.load_destination.keys()
         assert "server" in keys and "database" in keys and "table" in keys, fail_string
         return
+
+    def _replace_FROM_destination(self,string):
+        result = re.sub(r"from\s\K\S+", self.load_destination["table"], string, flags = re.IGNORECASE)
+        return result
         
 
 if __name__ == "__main__":
