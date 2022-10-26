@@ -66,6 +66,7 @@ class AzureLoader:
         """
         #replace table name to limit instances access to other tables
         sql_string = self._replace_FROM_destination(sql_string)
+        sql_string = "".join(sql_string.splitlines())
         cursor = self.cnxn.cursor()
         result = cursor.execute(sql_string)
         cols = [col[0] for col in result.description]
