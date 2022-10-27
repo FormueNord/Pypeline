@@ -62,10 +62,7 @@ class AzureLoader:
     def get_execute(self,sql_string: str) -> pd.DataFrame:
         """
         Execute sql_string and return pandas dataframe.
-        Replaces the word after FROM with the table specificed in load_destination.
         """
-        #replace table name to limit instances access to other tables
-        sql_string = self._replace_FROM_destination(sql_string)
         sql_string = "".join(sql_string.splitlines())
         cursor = self.cnxn.cursor()
         result = cursor.execute(sql_string)
@@ -173,10 +170,6 @@ class AzureLoader:
         keys = self.load_destination.keys()
         assert "server" in keys and "database" in keys and "table" in keys, fail_string
         return
-
-    def _replace_FROM_destination(self,string):
-        result = re.sub(r"from\s\K\S+", self.load_destination["table"], string, flags = re.IGNORECASE)
-        return result
         
 
 if __name__ == "__main__":
