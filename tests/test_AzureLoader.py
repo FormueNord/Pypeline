@@ -34,7 +34,7 @@ def read_load_destination_file():
                 (2,2,2,'2022-11-09')
     """
 
-    with open(os.path.join(sys.path[0],"load_destination.txt"),"r") as f:
+    with open(os.path.join("\\".join(__file__.split("\\")[0:-1]),"load_destination.txt"),"r") as f:
         content = f.read()
     content = ast.literal_eval(content)
     return content
