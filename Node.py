@@ -54,7 +54,7 @@ class Node:
         self.ErrorAlerter = ErrorAlerter
 
 
-    def monitor_pipelines(self):
+    def monitor_pipelines(self,single_run = False):
         """
         Monitors loaded instances of Pipeline calling their trigger method and calls the run method if the trigger's conditions are met.
         """
@@ -66,6 +66,8 @@ class Node:
                 trigger_result = self.trigger(pipeline_name, pipeline_instance)
                 if trigger_result:
                     self.run(pipeline_name, trigger_result, pipeline_instance)
+            if single_run == True:
+                return
             time.sleep(60)
 
     @_alert_decor
@@ -97,7 +99,7 @@ class Node:
         """
 
         #get filename in pipelines_folder
-        pipeline_files = os.listdir("Pipelines")
+        pipeline_files = os.listdir(pipelines_folder)
         pipeline_files = [file[:-3] for file in pipeline_files if file[-3:] == ".py" and file != "__init__.py"]
         
         #add pipeline_folder to path
@@ -128,7 +130,7 @@ class Node:
         temp = ErrorAlerter("","","")
 
         print("Credentials are stored locally")
-        return
+        return True
 
 
 def main():
