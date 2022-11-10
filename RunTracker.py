@@ -3,6 +3,9 @@ import os
 import pickle
 
 class RunTracker:
+    """
+    Scheduler for the data pipeline orchestrator
+    """
 
     _tracking_file_path = os.path.join(os.path.dirname(__file__),"Tracking data.pickle")
 
@@ -33,7 +36,6 @@ class RunTracker:
     def _check_loaded_data(self,pipeline_data):
         keys = self.tracking_data.keys()
         subkeys = self._template_subdict.keys()
-        made_a_change = False
 
         for pipeline_name in pipeline_data:
             #If pipeline not in first level of dict add it using template
@@ -69,6 +71,7 @@ class RunTracker:
         data = self.tracking_data[pipeline_name]
         now = datetime.datetime.now()
         time_passed = now - data["schedule"]
+        # formula is a bit complex to avoid scheduler from slowly drifting
         next_workflow = (time_passed // data["interval"] + 1) * data["interval"] + data["schedule"]
         self.tracking_data[pipeline_name]["last trigger"] = now
         self.tracking_data[pipeline_name]["schedule"] = next_workflow
