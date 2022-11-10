@@ -1,5 +1,4 @@
 from Pypeline.AzureLoader import AzureLoader 
-from Pypeline.ErrorAlerter import ErrorAlerter
 import os
 import shutil
 import datetime
