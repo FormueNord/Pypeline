@@ -1,8 +1,7 @@
 import pytest
-from Pypeline.AzureLoader import AzureLoader
+from Pypeline import AzureLoader
 import ast
 import pyodbc
-import sys
 import os
 import pandas as pd
 from datetime import date

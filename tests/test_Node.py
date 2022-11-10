@@ -1,11 +1,7 @@
-from Pypeline.Node import Node
-from Pypeline.Pipeline import Pipeline
+from Pypeline import Node
 import pytest
 import os
-import sys
-from test_pipeline.pipeline_for_test import test_file_path, pipeline_for_test
-from test_AzureLoader import read_load_destination_file
-import copy
+from test_pipeline.pipeline_for_test import test_file_path
 
 test_pipelines_folder = os.path.join("\\".join(__file__.split("\\")[0:-1]),"test_pipeline")
 
