@@ -5,7 +5,7 @@ import ast
 
 class ErrorAlerter():
     
-    cred_file_name = "mail_cred_details.txt"
+    _cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "mail_cred_details.txt"
 
     def __init__(self,receivers: str, subject: str, warning_text: str):
         self.receivers = receivers
@@ -15,10 +15,10 @@ class ErrorAlerter():
 
     def _load_credentials(self):
         #create new file if none is available
-        if self.cred_file_name not in os.listdir():
+        if not os.path.isfile(self._cred_file_name):
             print("No mail_cred_details.txt file found in root")
             self._create_new_credentials_file()
-        with open(self.cred_file_name,"r") as f:
+        with open(self._cred_file_name,"r") as f:
             content = f.read()
             content_str = bytes.fromhex(content).decode("UTF-8")
             content_dict = ast.literal_eval(content_str)
@@ -34,7 +34,7 @@ class ErrorAlerter():
             pwd = input("Whats your password?:   ")
             creds = {"uid":uid,"pwd":pwd}
 
-            with open(self.cred_file_name,"w") as f:
+            with open(self._cred_file_name,"w") as f:
                 f.write(str(creds).encode("UTF-8").hex())
             
             print("New credentials file created!")
@@ -55,22 +55,6 @@ class ErrorAlerter():
         message['Cc'] = ';'.join(self.receivers[1:])
         self.message = message
         return 
-    
-    #Currently not implemented since it would pause the Node for the duration of time.sleep
-    #Fix at some point
-    """def _reattempt_decorator(func):
-    def wrapper(self):
-        number_of_attempts = 0
-        while number_of_attempts < 10:
-            try: 
-                func(self)
-                return
-            except:
-                number_of_attempts += 1
-            print('I failed')
-            time.sleep(60*60)
-            return
-    return wrapper """
 
     def _send_email(self):
         with SMTP('smtp.office365.com',587) as server:
