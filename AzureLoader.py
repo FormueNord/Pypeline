@@ -3,14 +3,28 @@ import pyodbc
 import ast
 import pandas as pd
 import numpy as np
-import regex as re
 
 class AzureLoader:
+    """
+    A class to manage loading from and to a specific Azure SQL Server database table using.
+    Authentication is per default handled by ActiveDirectoryPassword, and the class will prompt for new credentials, the first time it is called.
+    Different credentials can be stored for different Azure servers and or databases.
+    A .txt file will be created containing the credentials in the folder containing the AzureLoader code. Be vary that the credentials are only encoded and hexified. CREDENTIALS ARE NOT ENCRYPTED.
+    """
 
     _cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
 
-
     def __init__(self, load_destination, authentication_type = "ActiveDirectoryPassword", testing_credentials = False):
+        """
+        Constructs an obj of AzureLoader
+
+        INPUT:
+            load_destination (dict[server, database, table]): specifies default load destination for the obj
+        OPTIONAL:
+        authentication_type (str): string specifying the ODBC authentication type. Default is ActiveDirectoryPassword
+        testing_credentials (bool): used to test whether credentials are viable. If True validity of load_destination will not be asserted
+        """
+        
         self.load_destination = load_destination
         if not testing_credentials:
             self._assert_load_destination()
@@ -21,7 +35,14 @@ class AzureLoader:
         if not NEW_CRED:
             self._login()
         
-    def insert(self,df) -> None:
+    def insert(self,df: pd.DataFrame) -> None:
+        """
+        Insert Pandas DataFrame to table specified in constructor's "load_destination" parameter.
+        Column names of DataFrame is matched with table names. 
+
+        RETURNS:
+            None
+        """
         #transform np.nan vals to None
         df = df.replace([np.nan],[None])
 
@@ -42,6 +63,9 @@ class AzureLoader:
     def get_all(self) -> pd.DataFrame:
         """
         Get all data for all columns in table
+
+        RETURNS:
+            Pandas DataFrame with all data from table
         """
         sql_string = f"SELECT * FROM {self.load_destination['table']}"
         return self.get_execute(sql_string)
@@ -49,7 +73,14 @@ class AzureLoader:
     def get(self, columns: list[str], filter_string: str = "") -> pd.DataFrame:
         """
         Get data for specified columns.
-        OPTIONAL: specify filter string in SQL format
+
+        INPUT:
+            columns (list[str]): list of column names to be fetched
+        OPTIONAL: 
+        filter_string (str): specify T-SQL filter ex. 'ID = 5 AND Date = '2022-11-09''
+        
+        RETURNS: 
+            Pandas DataFrame with values of selected columns
         """
         select_string = "SELECT " + ",".join(columns)
         if filter_string != "":
@@ -62,6 +93,12 @@ class AzureLoader:
     def get_execute(self,sql_string: str) -> pd.DataFrame:
         """
         Execute sql_string and return pandas dataframe.
+
+        INPUT: 
+            sql_string (str): sql string to be executed
+        
+        RETURNS:
+            Query result as a Pandas DataFrame
         """
         sql_string = "".join(sql_string.splitlines())
         cursor = self.cnxn.cursor()
@@ -70,7 +107,15 @@ class AzureLoader:
         data = result.fetchall()
         return pd.DataFrame.from_records(data, columns = cols)
 
-    def delete_credential(self, azure_server:str, database = None) -> None:
+    def delete_credential(self, azure_server:str, database:str = None) -> None:
+        """
+        Deletes stores credentials for specified Azure SQL Server or if specified specific database on server.
+        
+        INPUT:
+            azure_server (str): server for which credentials are to be deleted
+        OPTIONAL:
+        database (str): database on server for which credentials are to be deleted
+        """
         content = self._read_credentials_file()
         
         #remove all server credentials
@@ -84,6 +129,12 @@ class AzureLoader:
         return
 
     def _get_credentials(self) -> bool:
+        """
+        Loads credentials from credentials file.
+
+        RETURNS:
+            Bool indicating whether successful
+        """
         #check if file exists and read file
         file_exists = os.path.isfile(self._cred_file_name)
         if not file_exists:
@@ -109,6 +160,9 @@ class AzureLoader:
         return False
     
     def new_credential(self, file_exists = False, server_in_content = False) -> bool:
+        """
+        Create new credentials for Azure SQL Server
+        """
         answer = input("Do you wanna save new credentials? (Y/N): ")
         if answer == "N":
             return False
@@ -165,25 +219,11 @@ class AzureLoader:
             f.write(content)
 
     def _assert_load_destination(self):
+        """
+        Asserts correctness of specified load_destination parameter given to constructor
+        """
         fail_string = "load_destination must be a dict with a 'server','database' and 'table' keys"
         assert isinstance(self.load_destination,dict), fail_string
         keys = self.load_destination.keys()
         assert "server" in keys and "database" in keys and "table" in keys, fail_string
         return
-        
-
-if __name__ == "__main__":
-    from datetime import datetime
-    now = datetime.now()
-    #used for debugging
-    df = pd.DataFrame([
-        [-1,1.1,1.2,now],
-        [-2,1.12,1.13,now]],
-        columns = ["ID","val1","val2","date"])
-    df = df.replace([np.nan],[None])
-    """ Loader = AzureLoader(load_destination = destination)
-    Loader.insert(df,destination["table"]) """
-
-
-
-    print("stop")
