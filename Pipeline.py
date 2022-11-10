@@ -12,6 +12,9 @@ class Pipeline:
 
     The default run method goes: extract -> transform -> load -> check -> clean
 
+    If ever refactored it'd make sense to make this an abstract class instead, as to giver the implementer more control, 
+    but this would require refactoring of all instances of Pipeline
+
     Args:
         trigger_func:  Function taking no args and returning a destination (e.g. absolute path or https) for the extract_func or alternatively nothing.
                        Function is prompted by Node, and if anything evaluated as True is returned, the self.run method will run with the trigger_func return as arg.
