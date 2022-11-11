@@ -5,7 +5,7 @@ import ast
 
 class ErrorAlerter():
     
-    _cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "mail_cred_details.txt"
+    _cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\mail_cred_details.txt"
 
     def __init__(self,receivers: str, subject: str, warning_text: str):
         self.receivers = receivers
