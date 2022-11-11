@@ -23,6 +23,8 @@ class ErrorAlerter():
             content_str = bytes.fromhex(content).decode("UTF-8")
             content_dict = ast.literal_eval(content_str)
             self.uid, self.pwd = content_dict["uid"], content_dict["pwd"]
+            # fails and raises error if uid and pwd can't authenticate
+            self._login_test(self.uid, self.pwd)
         print("read the ErrorAlert's credentials file!")
         return
 
@@ -32,8 +34,11 @@ class ErrorAlerter():
         if create_new:
             uid = input("Whats your mail adress?:  ")
             pwd = input("Whats your password?:   ")
-            creds = {"uid":uid,"pwd":pwd}
 
+            # fails and raises error if uid and pwd can't authenticate
+            self._login_test(uid,pwd)
+
+            creds = {"uid":uid,"pwd":pwd}
             with open(self._cred_file_name,"w") as f:
                 f.write(str(creds).encode("UTF-8").hex())
             
@@ -55,6 +60,16 @@ class ErrorAlerter():
         message['Cc'] = ';'.join(self.receivers[1:])
         self.message = message
         return 
+
+    @staticmethod
+    def _login_test(uid, pwd):
+        try:
+            with SMTP('smtp.office365.com',587) as server:
+                server.ehlo()
+                server.starttls()
+                server.login(uid,pwd)
+        except Exception as e:
+            raise Exception(f"Failed to authenticate using the credentials error code is: {e}")
 
     def _send_email(self):
         with SMTP('smtp.office365.com',587) as server:
