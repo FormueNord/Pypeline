@@ -163,7 +163,7 @@ class AzureLoader:
         """
         Create new credentials for Azure SQL Server
         """
-        answer = input("Do you wanna save new credentials? (Y/N): ")
+        answer = input("Do you wanna save new credentials for AzureLoader (Microsoft Active Directory credentials)? (Y/N): ")
         if answer == "N":
             return False
         self._UID = input("Enter email: ")
@@ -190,20 +190,28 @@ class AzureLoader:
     def _login(self) -> None:
         try:
             self.cnxn = pyodbc.connect(
-                "DRIVER={ODBC Driver 17 for SQL Server}"+
+                "DRIVER={ODBC Driver 18 for SQL Server}"+
                 ";SERVER="+self.load_destination["server"]+
                 ";DATABASE="+self.load_destination["database"]+
                 ";UID="+self._UID+
                 ";PWD="+self._PWD+
                 ";Authentication="+self.authentication_type
             )
-        except(pyodbc.Error) as e:
-            
+        except(pyodbc.Error) as e: 
             print("""
-        If this fails and requires MFA set the parameter 'authentication_type' to 'ActiveDirectoryInteractive'. 
-        This will allow for MFA auth""")
-
-            raise e
+                Authentication failed for specified authentication type.
+                Attempts authentication using ActiveDirectoryInteractive for a MFA authentication-flow""")
+            try:
+                self.cnxn = pyodbc.connect(
+                "DRIVER={ODBC Driver 18 for SQL Server}"+
+                ";SERVER="+self.load_destination["server"]+
+                ";DATABASE="+self.load_destination["database"]+
+                ";UID="+self._UID+
+                ";Authentication="+"ActiveDirectoryInteractive"
+            )
+            except(pyodbc.Error) as e:
+                print("MFA authentication-flow failed as well")
+                raise e
         return
     
     def _read_credentials_file(self) -> dict:
