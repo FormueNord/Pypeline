@@ -1,3 +1,4 @@
 cred_details.txt
 *.pickle
 *.pyc
+tests/load_destination.txt
