@@ -70,7 +70,7 @@ def test_insert():
 
 def test_get():
     columns = ["ID","val1","val2"]
-    filter_string = "ID = 1"
+    filter_string = "ID IS NOT NULL"
 
     result = loader.get(columns = columns, filter_string = filter_string)
     
@@ -79,7 +79,7 @@ def test_get():
 
 
 def test_get_execute():
-    result = loader.get_execute("SELECT * FROM dbo.testTable WHERE ID = 1")
+    result = loader.get_execute("SELECT * FROM dbo.testTable WHERE ID IS NOT NULL")
 
     assert len(result.index) != 0, "The get_execute function failed and returned empty handed. Atleast 1 row was expected"
     assert isinstance(result,pd.DataFrame), "the get_execute function did not return af Pandas DataFrame"

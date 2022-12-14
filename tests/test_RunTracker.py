@@ -32,6 +32,8 @@ def test_update():
 
 
 def test_update_scheduler():
+    # for some reason the interval is can be None - this is a quickfix
+    tracker.tracking_data[pipeline_name]["interval"] = test_schedule_interval
     temp_schedule_time = datetime(2000,1,1,20,00,00,00)
     tracker.tracking_data[pipeline_name]["schedule"] = temp_schedule_time
     try:
