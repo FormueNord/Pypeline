@@ -115,8 +115,8 @@ class Mailbox:
         try:
             othenticator = Othenticator.Othenticator(config)
             othenticator.imap_authentication(username = email, imap_instance = self.imap)
-        except: 
-            raise Exception(f"Othenticator failed to authenticate email {email}")
+        except Exception as e: 
+            raise Exception(f"Othenticator failed to authenticate email {email}. Error was {e}")
 
     def __exit___(self):
         #close connection to email when script ends
