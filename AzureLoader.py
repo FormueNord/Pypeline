@@ -3,6 +3,7 @@ import pyodbc
 import ast
 import pandas as pd
 import numpy as np
+from typing import Union
 
 class AzureLoader:
     """
@@ -77,7 +78,7 @@ class AzureLoader:
         INPUT:
             columns (list[str]): list of column names to be fetched
         OPTIONAL: 
-        filter_string (str): specify T-SQL filter ex. 'ID = 5 AND Date = '2022-11-09''
+            filter_string (str): specify T-SQL filter ex. 'ID = 5 AND Date = '2022-11-09''
         
         RETURNS: 
             Pandas DataFrame with values of selected columns
@@ -106,6 +107,68 @@ class AzureLoader:
         cols = [col[0] for col in result.description]
         data = result.fetchall()
         return pd.DataFrame.from_records(data, columns = cols)
+    
+    def update(self, df: pd.DataFrame, filter_columns: Union[list[str], str]) -> list[bool,Exception]:
+        """
+        Updates the values in the database where the filter_columns is matched for each row.
+
+        INPUT:
+            df (pd.DataFrame): dataset with columns matching database table columns and containing values to be filtered and updated with
+            filter_columns (list[str]|str): the column names to be used as filters for the update operation
+        
+        RETURNS:
+            list[boolean indicating success, Exception if any]
+        """
+        if isinstance(filter_columns, str):
+            filter_columns = [filter_columns]
+
+        # preserves the dtypes of each row as they become pd.Series in .iloc below (https://stackoverflow.com/questions/62647887/preserving-dtypes-when-extracting-a-row-from-a-pandas-dataframe)
+        df = df.astype("object")
+        
+        values_df = df.drop(filter_columns, axis = 1)
+        filter_df = df.loc[:,filter_columns]
+        cursor = self.cnxn.cursor()
+        sql_strings = []
+        for i in range(0,len(values_df)):
+            sql_string = self._create_update_sql_string(values_df.iloc[i], filter_df.iloc[i])
+            sql_strings.append(sql_string)
+        
+        # cursor is a transaction per default, changes are first made in commit
+        try:
+            cursor.execute("; ".join(sql_strings))
+            cursor.commit()
+        except Exception as e:
+            return [False,e]
+        return [True, None]
+
+
+    def _create_update_sql_string(self, values_ds: pd.Series, filter_ds: pd.Series):
+        """
+        Creates an update sql string which can update columns matching values_df index using values from values_df and filtering from filter_ds.
+
+        INPUT: 
+            values_ds (pd.Series): dataseries with index matching database columns containing values to be set
+            filter_ds (pd.Series): dataseries with indexes matching database columns and containing values for filtering
+        
+        RETURNS:
+            sql string
+        """
+
+        UPDATE = f"UPDATE {self.load_destination['table']} "
+        SET = "SET "
+        for index, value in values_ds.items():
+            SET += f"{index} = '{value}', "
+        # drop the trailing space and comma
+        SET = SET[:-2] + " "
+
+        WHERE = "WHERE "
+        for index, filter in filter_ds.items():
+            WHERE += f"{index} = '{filter}' AND "
+        WHERE = WHERE[:-5] + ";"
+
+        sql_string = UPDATE + SET + WHERE
+        return sql_string        
+
 
     def delete_credential(self, azure_server:str, database:str = None) -> None:
         """
@@ -114,7 +177,7 @@ class AzureLoader:
         INPUT:
             azure_server (str): server for which credentials are to be deleted
         OPTIONAL:
-        database (str): database on server for which credentials are to be deleted
+            database (str): database on server for which credentials are to be deleted
         """
         content = self._read_credentials_file()
         
