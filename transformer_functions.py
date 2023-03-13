@@ -47,10 +47,6 @@ def collateral_transformer():
         df = strings_to_dates(df)
         df.insert(1,"Upload_Date",datetime.datetime.now().date())
 
-        #temporary until column names implemented in Azure Loader
-        #df.insert(11, "Haircut_percent",0)
-        #df.insert(12,"FX_haircut_percent",0)
-        #df.drop("Valuation_percent", axis = 1, inplace = True)
         return df
     return wrapper
 
