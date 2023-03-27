@@ -11,6 +11,8 @@ class AzureLoader:
     Authentication is per default handled by ActiveDirectoryPassword, and the class will prompt for new credentials, the first time it is called.
     Different credentials can be stored for different Azure servers and or databases.
     A .txt file will be created containing the credentials in the folder containing the AzureLoader code. Be vary that the credentials are only encoded and hexified. CREDENTIALS ARE NOT ENCRYPTED.
+    
+    DRIVER NEEDS TO BE ODBC 18 AS OF LATEST VERSION!
     """
 
     _cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
@@ -272,6 +274,15 @@ class AzureLoader:
                 ";UID="+self._UID+
                 ";Authentication="+"ActiveDirectoryInteractive"
             )
+            except pyodbc.InterfaceError as e:
+                raise ConnectionError("""
+------------------------------
+------------------------------
+    As of latest version the PC needs to have the ODBC Driver 18 for SQL Server!
+------------------------------
+------------------------------
+                """) from e
+
             except(pyodbc.Error) as e:
                 print("MFA authentication-flow failed as well")
                 raise e
