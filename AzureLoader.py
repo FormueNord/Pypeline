@@ -17,6 +17,7 @@ class AzureLoader:
 
     _cred_file_name = "\\".join(__file__.split("\\")[0:-1]) + "\\cred_details.txt"
 
+    DEFAULT_AUTH_FAILED_WARNING_GIVEN = False
     def __init__(self, load_destination, authentication_type = "ActiveDirectoryPassword", testing_credentials = False):
         """
         Constructs an obj of AzureLoader
@@ -263,9 +264,14 @@ class AzureLoader:
                 ";Authentication="+self.authentication_type
             )
         except(pyodbc.Error) as e: 
-            print("""
-                Authentication failed for specified authentication type.
-                Attempts authentication using ActiveDirectoryInteractive for a MFA authentication-flow""")
+
+            # don't repeat the print each time AzureLoader logins - it confuses people
+            if not AzureLoader.DEFAULT_AUTH_FAILED_WARNING_GIVEN:
+                print("""
+                    Authentication failed for specified authentication type.
+                    Attempts authentication using ActiveDirectoryInteractive for a MFA authentication-flow""")
+                AzureLoader.DEFAULT_AUTH_FAILED_WARNING_GIVEN = True
+                
             try:
                 self.cnxn = pyodbc.connect(
                 "DRIVER={ODBC Driver 18 for SQL Server}"+
