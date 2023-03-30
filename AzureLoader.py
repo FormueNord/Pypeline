@@ -111,6 +111,30 @@ class AzureLoader:
         data = result.fetchall()
         return pd.DataFrame.from_records(data, columns = cols)
     
+    def execute_as_transaction(self, sql_string: str) -> list[bool, Exception]:
+        """
+        Executes sql_string as transaction
+        
+        INPUT:
+            sql_string (str): sql string to be executed
+        
+        RETURNS:
+            list containing Boolean indicating whether execution succeded and Exception thrown if any
+        """
+        sql_string = "".join(sql_string.splitlines())
+        sql_string = f"BEGIN TRANSACTION {sql_string} COMMIT;"
+        error = None
+        try:
+            cursor = self.cnxn.cursor()
+            cursor.execute(sql_string)
+            cursor.commit()
+            success = True
+        except Exception as e:
+            success = False
+            error = e
+        return [success, error]
+
+
     def update(self, df: pd.DataFrame, filter_columns: Union[list[str], str]) -> list[bool,Exception]:
         """
         Updates the values in the database where the filter_columns is matched for each row.
