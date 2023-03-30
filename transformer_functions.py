@@ -79,7 +79,7 @@ def exposure_transformer():
         df = df[df["File_Date_ID"] != "File_Date_ID"]
         df = strings_to_dates(df)
         df.insert(1,"Upload_Date",datetime.datetime.now().date())
-        df["File_Date_ID"] = df["Exposure_Date_ID"]
+        df["File_Date_ID"] = df["Exposure_Date_ID"].mode()[0]
         return df
     return wrapper
 
