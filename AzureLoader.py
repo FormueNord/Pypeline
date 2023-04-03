@@ -122,7 +122,6 @@ class AzureLoader:
             list containing Boolean indicating whether execution succeded and Exception thrown if any
         """
         sql_string = "".join(sql_string.splitlines())
-        sql_string = f"BEGIN TRANSACTION {sql_string} COMMIT;"
         error = None
         try:
             cursor = self.cnxn.cursor()
