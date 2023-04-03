@@ -42,8 +42,8 @@ class Pipeline:
     """
 
 
-    def __init__(self, trigger_func: Callable,  error_notify_mails: str, extractor_func : Callable[[]] = lambda x: x, transformer_func: Callable[[]] = lambda x: x,
-        check_func: Callable[[]] = lambda: None, run_func: Callable[[]] = None, load_destination: dict = None, cleaning: str = "move", timer: dict = None, LoaderObj = AzureLoader):
+    def __init__(self, trigger_func: Callable,  error_notify_mails: str, extractor_func : Callable = lambda x: x, transformer_func: Callable = lambda x: x,
+        check_func: Callable = lambda: None, run_func: Callable = None, load_destination: dict = None, cleaning: str = "move", timer: dict = None, LoaderObj = AzureLoader):
         self._trigger_func = trigger_func
         self._extractor_func = extractor_func
         self._load_destination = load_destination
